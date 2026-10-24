@@ -1,0 +1,29 @@
+{
+  "name": "भावेश विद्या निकेतन उच्चतर माध्यमिक विद्यालय",
+  "short_name": "भावेश विद्या निकेतन",
+  "description": "ज्ञान से संस्कार, संस्कार से सफलता। सीबीएसई मान्यता प्राप्त उत्कृष्ट शिक्षण संस्थान, इंदौर।",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#08182b",
+  "theme_color": "#08182b",
+  "icons": [
+    {
+      "src": "assets/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "school", "books"],
+  "lang": "hi-IN",
+  "dir": "ltr"
+}

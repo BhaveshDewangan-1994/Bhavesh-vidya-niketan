@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://bhavesh-vidya-niketan.netlify.app/</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://bhavesh-vidya-niketan.netlify.app/assets/images/logo.png</image:loc>
+      <image:title>भावेश विद्या निकेतन आधिकारिक लोगो</image:title>
+      <image:caption>भावेश विद्या निकेतन उच्चतर माध्यमिक विद्यालय - सा विद्या या विमुक्तये</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://bhavesh-vidya-niketan.netlify.app/assets/images/hero-campus.jpg</image:loc>
+      <image:title>भावेश विद्या निकेतन आधुनिक परिसर एवं छात्र</image:title>
+      <image:caption>इंदौर स्थित भावेश विद्या निकेतन 10 एकड़ का अत्याधुनिक शैक्षणिक परिसर</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://bhavesh-vidya-niketan.netlify.app/#about</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://bhavesh-vidya-niketan.netlify.app/#wings</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://bhavesh-vidya-niketan.netlify.app/#facilities</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://bhavesh-vidya-niketan.netlify.app/#gallery</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://bhavesh-vidya-niketan.netlify.app/#streams</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bhavesh-vidya-niketan.netlify.app/#results</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://bhavesh-vidya-niketan.netlify.app/#testimonials</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://bhavesh-vidya-niketan.netlify.app/#admission-section</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://bhavesh-vidya-niketan.netlify.app/#contact</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+</urlset>

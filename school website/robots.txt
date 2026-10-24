@@ -1,0 +1,8 @@
+# Robots.txt for Bhavesh Vidya Niketan Higher Secondary School
+# Website: https://bhavesh-vidya-niketan.netlify.app/
+
+User-agent: *
+Allow: /
+
+# Sitemap Index Directive for Googlebot, Bingbot & Search Engines
+Sitemap: https://bhavesh-vidya-niketan.netlify.app/sitemap.xml

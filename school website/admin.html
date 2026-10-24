@@ -1,0 +1,2249 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>एडमिन प्रबंधन पोर्टल | भावेश विद्या निकेतन</title>
+  
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Google Fonts: Noto Sans Devanagari, Cinzel, Yatra One -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Yatra+One&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    /* ==========================================================================
+       CSS Variables & Theme Settings (Matching भावेश विद्या निकेतन)
+       ========================================================================== */
+    :root {
+      --bg-deep: #030a14;
+      --bg-card: rgba(11, 25, 44, 0.88);
+      --bg-card-hover: rgba(16, 36, 64, 0.95);
+      --bg-input: rgba(4, 13, 24, 0.85);
+      --border-gold: rgba(212, 175, 55, 0.35);
+      --border-gold-focus: #D4AF37;
+      --gold-primary: #D4AF37;
+      --gold-light: #FEF08A;
+      --gold-dark: #996515;
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --success-green: #10B981;
+      --success-bg: rgba(16, 185, 129, 0.16);
+      --danger-red: #EF4444;
+      --danger-bg: rgba(239, 68, 68, 0.16);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --shadow-luxury: 0 20px 45px -10px rgba(0, 0, 0, 0.7), 0 0 30px rgba(212, 175, 55, 0.12);
+      --font-body: 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-heading: 'Yatra One', 'Cinzel', serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at 50% 10%, #0d2646 0%, #061424 50%, var(--bg-deep) 100%);
+      background-attachment: fixed;
+      font-family: var(--font-body);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 24px 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Ambient Gold Shimmer Top Bar */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--gold-primary), #FFF, var(--gold-primary), transparent);
+      z-index: 100;
+    }
+
+    a {
+      color: var(--gold-primary);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    a:hover {
+      color: var(--gold-light);
+      text-decoration: underline;
+    }
+
+    /* Layout Containers */
+    .admin-container {
+      width: 100%;
+      max-width: 940px;
+      margin: 0 auto;
+    }
+
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-gold);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-luxury);
+      padding: 32px 28px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(254, 240, 138, 0.4), transparent);
+    }
+
+    /* Header & Branding */
+    .brand-header {
+      text-align: center;
+      margin-bottom: 22px;
+    }
+
+    .brand-logo-wrap {
+      width: 74px;
+      height: 74px;
+      margin: 0 auto 12px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(212, 175, 55, 0.25) 0%, rgba(4, 13, 24, 0.9) 80%);
+      border: 2px solid var(--gold-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 24px rgba(212, 175, 55, 0.3);
+    }
+
+    .brand-logo-wrap img {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+    }
+
+    .brand-title {
+      font-family: var(--font-heading);
+      font-size: 1.65rem;
+      color: var(--gold-light);
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .brand-subtitle {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .brand-subtitle i {
+      color: var(--gold-primary);
+    }
+
+    /* ==========================================================================
+       SECTION 1: PIN MODAL LOCK SCREEN
+       ========================================================================== */
+    #authCard {
+      max-width: 460px;
+      margin: 40px auto;
+      text-align: center;
+    }
+
+    .pin-lock-icon {
+      font-size: 2.4rem;
+      color: var(--gold-primary);
+      margin-bottom: 16px;
+      display: inline-block;
+      animation: pulseGold 2.5s infinite;
+    }
+
+    @keyframes pulseGold {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(212,175,55,0.4)); }
+      50% { transform: scale(1.06); filter: drop-shadow(0 0 16px rgba(212,175,55,0.8)); }
+    }
+
+    .pin-input-group {
+      position: relative;
+      margin: 24px 0 16px;
+    }
+
+    .pin-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border-gold);
+      border-radius: var(--radius-md);
+      padding: 14px 48px 14px 20px;
+      font-size: 1.3rem;
+      letter-spacing: 6px;
+      text-align: center;
+      color: var(--gold-light);
+      font-weight: 700;
+      transition: all 0.3s ease;
+      outline: none;
+    }
+
+    .pin-input:focus {
+      border-color: var(--border-gold-focus);
+      box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.25);
+      background: rgba(8, 24, 43, 0.95);
+    }
+
+    .pin-toggle-visibility {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 6px;
+    }
+
+    .pin-toggle-visibility:hover {
+      color: var(--gold-light);
+    }
+
+    .btn-unlock {
+      width: 100%;
+      background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+      color: #040d18;
+      font-weight: 700;
+      font-size: 1.05rem;
+      padding: 13px 24px;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      box-shadow: 0 8px 20px rgba(184, 134, 11, 0.35);
+    }
+
+    .btn-unlock:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 26px rgba(212, 175, 55, 0.5);
+      background: linear-gradient(135deg, #f3db78 0%, #d4af37 100%);
+    }
+
+    /* ==========================================================================
+       SECTION 2: ADMIN PORTAL TOP NAV & TABS
+       ========================================================================== */
+    .portal-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+      background: rgba(7, 18, 33, 0.8);
+      border: 1px solid rgba(212, 175, 55, 0.2);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      margin-bottom: 20px;
+    }
+
+    .portal-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--success-green);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--success-green);
+      animation: blinkDot 2s infinite;
+    }
+
+    @keyframes blinkDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .portal-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-nav-action {
+      background: rgba(212, 175, 55, 0.1);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: var(--gold-light);
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn-nav-action:hover {
+      background: rgba(212, 175, 55, 0.22);
+      color: #fff;
+      text-decoration: none;
+      transform: translateY(-1px);
+    }
+
+    .btn-logout {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
+
+    .btn-logout:hover {
+      background: rgba(239, 68, 68, 0.3);
+      color: #fff;
+    }
+
+    /* 3 Tabs Navigation Bar */
+    .admin-tabs-nav {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+      padding-bottom: 12px;
+      overflow-x: auto;
+    }
+
+    .admin-tab-btn {
+      background: rgba(4, 13, 24, 0.65);
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      color: var(--text-muted);
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.25s ease;
+      white-space: nowrap;
+    }
+
+    .admin-tab-btn:hover {
+      background: rgba(212, 175, 55, 0.12);
+      color: var(--gold-light);
+      border-color: rgba(212, 175, 55, 0.4);
+    }
+
+    .admin-tab-btn.active {
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.22) 0%, rgba(184, 134, 11, 0.3) 100%);
+      border-color: var(--gold-primary);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(212, 175, 55, 0.2);
+    }
+
+    .tab-badge {
+      background: rgba(212, 175, 55, 0.2);
+      border: 1px solid var(--border-gold);
+      color: var(--gold-light);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .admin-tab-btn.active .tab-badge {
+      background: var(--gold-primary);
+      color: #040d18;
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--gold-light);
+      margin-bottom: 8px;
+    }
+
+    .form-label .req {
+      color: var(--danger-red);
+      margin-left: 3px;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-gold);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      color: var(--text-main);
+      font-family: var(--font-body);
+      font-size: 0.98rem;
+      transition: all 0.25s ease;
+      outline: none;
+    }
+
+    .form-control:focus {
+      border-color: var(--border-gold-focus);
+      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25);
+      background: rgba(8, 24, 43, 0.95);
+    }
+
+    .form-control::placeholder {
+      color: rgba(148, 163, 184, 0.6);
+    }
+
+    select.form-control {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23D4AF37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 16px;
+      padding-right: 40px;
+      cursor: pointer;
+    }
+
+    select.form-control option {
+      background: #061424;
+      color: #fff;
+      padding: 8px;
+    }
+
+    textarea.form-control {
+      resize: vertical;
+      min-height: 95px;
+    }
+
+    .form-hint {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    .custom-tag-wrap {
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* File Upload Input & Preview Zone */
+    .file-drop-zone {
+      border: 2px dashed rgba(212, 175, 55, 0.4);
+      background: rgba(4, 13, 24, 0.6);
+      border-radius: var(--radius-md);
+      padding: 24px 18px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+
+    .file-drop-zone:hover, .file-drop-zone.dragover {
+      border-color: var(--gold-primary);
+      background: rgba(8, 24, 43, 0.85);
+      box-shadow: 0 0 18px rgba(212, 175, 55, 0.15);
+    }
+
+    .file-drop-zone input[type="file"] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .drop-zone-icon {
+      font-size: 2.2rem;
+      color: var(--gold-primary);
+      margin-bottom: 8px;
+    }
+
+    .drop-zone-text {
+      color: #e2e8f0;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .drop-zone-sub {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-top: 4px;
+    }
+
+    .file-preview-card {
+      display: none;
+      align-items: center;
+      gap: 14px;
+      background: rgba(2, 8, 16, 0.8);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      margin-top: 12px;
+    }
+
+    .file-preview-thumb {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid var(--border-gold);
+    }
+
+    .file-preview-info {
+      flex-grow: 1;
+      overflow: hidden;
+    }
+
+    .file-preview-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-preview-size {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    /* Submit Button */
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+      color: #040d18;
+      font-weight: 700;
+      font-size: 1.05rem;
+      padding: 14px 24px;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      box-shadow: 0 8px 24px rgba(184, 134, 11, 0.35);
+      margin-top: 6px;
+    }
+
+    .btn-submit:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(212, 175, 55, 0.5);
+      background: linear-gradient(135deg, #fae288 0%, #d4af37 100%);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Alerts */
+    .alert-box {
+      display: none;
+      padding: 16px 20px;
+      border-radius: var(--radius-md);
+      margin-bottom: 22px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      animation: fadeInSlide 0.3s ease forwards;
+    }
+
+    @keyframes fadeInSlide {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .alert-success {
+      background: var(--success-bg);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #6ee7b7;
+    }
+
+    .alert-success .alert-title {
+      font-weight: 700;
+      color: #a7f3d0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      font-size: 1.05rem;
+    }
+
+    .alert-error {
+      background: var(--danger-bg);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .alert-error .alert-title {
+      font-weight: 700;
+      color: #fecaca;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      font-size: 1.05rem;
+    }
+
+    .alert-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-alert-link {
+      background: rgba(16, 185, 129, 0.25);
+      border: 1px solid #10b981;
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+
+    .btn-alert-link:hover {
+      background: #10b981;
+      color: #040d18;
+      text-decoration: none;
+    }
+
+    .section-title-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: 1.25rem;
+      color: var(--gold-light);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge-count {
+      background: rgba(212, 175, 55, 0.15);
+      border: 1px solid var(--border-gold);
+      color: var(--gold-light);
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-family: var(--font-body);
+    }
+
+    .btn-refresh {
+      background: transparent;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: var(--gold-light);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-refresh:hover {
+      background: rgba(212, 175, 55, 0.18);
+      color: #fff;
+    }
+
+    /* Red Delete Button */
+    .btn-delete {
+      background: rgba(239, 68, 68, 0.14);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      color: #fca5a5;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .btn-delete:hover:not(:disabled) {
+      background: #dc2626;
+      border-color: #ef4444;
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.45);
+    }
+
+    .btn-delete:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ==========================================================================
+       CARDS & GRIDS: NOTICES, ENQUIRIES, GALLERY
+       ========================================================================== */
+    .notice-card-item, .enquiry-card-item {
+      background: rgba(4, 13, 24, 0.75);
+      border: 1px solid rgba(212, 175, 55, 0.2);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+
+    .notice-card-item:hover, .enquiry-card-item:hover {
+      border-color: rgba(212, 175, 55, 0.45);
+      background: rgba(8, 20, 36, 0.9);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .notice-card-top, .enquiry-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .item-meta, .enquiry-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+
+    .item-tag {
+      background: linear-gradient(135deg, rgba(212,175,55,0.2) 0%, rgba(184,134,11,0.2) 100%);
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      color: var(--gold-light);
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.78rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .item-title {
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 6px;
+      line-height: 1.45;
+    }
+
+    .item-details {
+      font-size: 0.92rem;
+      color: #cbd5e1;
+      line-height: 1.55;
+    }
+
+    .item-link {
+      margin-top: 10px;
+      font-size: 0.82rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--gold-primary);
+      word-break: break-all;
+    }
+
+    /* Enquiries Specific */
+    .badge-grade {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(14, 165, 233, 0.25) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #7dd3fc;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.78rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .enquiry-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 18px;
+      margin-bottom: 12px;
+    }
+
+    .enquiry-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .enquiry-phone {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 0.95rem;
+    }
+
+    .phone-link {
+      color: var(--gold-light);
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      background: rgba(212, 175, 55, 0.12);
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      transition: all 0.2s;
+    }
+
+    .phone-link:hover {
+      background: var(--gold-primary);
+      color: #040d18;
+      text-decoration: none;
+    }
+
+    .btn-wa-shortcut {
+      background: rgba(37, 211, 102, 0.15);
+      border: 1px solid rgba(37, 211, 102, 0.35);
+      color: #4ade80;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-wa-shortcut:hover {
+      background: #25d366;
+      color: #040d18;
+      text-decoration: none;
+    }
+
+    .enquiry-message-box {
+      background: rgba(2, 8, 16, 0.65);
+      border: 1px solid rgba(212, 175, 55, 0.15);
+      border-left: 3px solid var(--gold-primary);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      color: #cbd5e1;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .enquiry-message-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Photo Gallery Grid & Cards */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+      margin-top: 16px;
+    }
+
+    .photo-card-item {
+      background: rgba(4, 13, 24, 0.75);
+      border: 1px solid rgba(212, 175, 55, 0.22);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .photo-card-item:hover {
+      border-color: rgba(212, 175, 55, 0.5);
+      background: rgba(8, 20, 36, 0.92);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+    }
+
+    .photo-card-thumb-wrap {
+      width: 100%;
+      height: 180px;
+      position: relative;
+      overflow: hidden;
+      background: #020810;
+    }
+
+    .photo-card-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.35s ease;
+    }
+
+    .photo-card-item:hover .photo-card-thumb {
+      transform: scale(1.06);
+    }
+
+    .photo-card-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(4, 13, 24, 0.85);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      color: var(--gold-light);
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      backdrop-filter: blur(6px);
+    }
+
+    .photo-card-content {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+
+    .photo-card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    .photo-card-bottom {
+      margin-top: auto;
+      padding-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(212, 175, 55, 0.15);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 36px 16px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .empty-state i {
+      font-size: 2.2rem;
+      color: var(--gold-primary);
+      opacity: 0.6;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .portal-footer {
+      text-align: center;
+      margin-top: 28px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 640px) {
+      .glass-card {
+        padding: 22px 16px;
+      }
+      .brand-title {
+        font-size: 1.35rem;
+      }
+      .portal-nav {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .portal-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .notice-card-top, .enquiry-card-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .btn-delete {
+        align-self: flex-end;
+      }
+      .enquiry-info-grid {
+        grid-template-columns: 1fr;
+      }
+      .gallery-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-container">
+
+    <!-- ====================================================================
+         SECTION 1: PIN AUTH MODAL SCREEN (SECRET KEY LOCK)
+         ==================================================================== -->
+    <div id="authCard" class="glass-card">
+      <div class="pin-lock-icon">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      
+      <div class="brand-logo-wrap">
+        <img src="assets/images/bvn-crest.png" alt="विद्यालय प्रतीक" onerror="this.src='assets/images/logo.png'">
+      </div>
+
+      <h1 class="brand-title">भावेश विद्या निकेतन</h1>
+      <p class="brand-subtitle"><i class="fa-solid fa-lock"></i> प्रशासनिक नियंत्रण कक्ष (Admin Portal)</p>
+
+      <!-- Incorrect PIN Alert -->
+      <div id="pinErrorAlert" class="alert-box alert-error" style="margin-top: 18px;">
+        <div class="alert-title">
+          <i class="fa-solid fa-circle-exclamation"></i> अमान्य पिन!
+        </div>
+        <p>कृपया सही एडमिन सुरक्षा पिन दर्ज करें।</p>
+      </div>
+
+      <div class="pin-input-group">
+        <input 
+          type="password" 
+          id="adminPinInput" 
+          class="pin-input" 
+          placeholder="••••" 
+          maxlength="10" 
+          inputmode="numeric" 
+          autocomplete="current-password"
+          aria-label="एडमिन सुरक्षा पिन"
+          autofocus
+        >
+        <button type="button" id="btnTogglePin" class="pin-toggle-visibility" title="पिन दिखाएं/छिपाएं">
+          <i class="fa-solid fa-eye" id="pinEyeIcon"></i>
+        </button>
+      </div>
+
+      <button type="button" id="btnUnlock" class="btn-unlock">
+        <i class="fa-solid fa-arrow-right-to-bracket"></i> एडमिन लॉगिन करें
+      </button>
+    </div>
+
+    <!-- ====================================================================
+         SECTION 2: ADMIN MANAGEMENT DASHBOARD (3 TABS)
+         ==================================================================== -->
+    <div id="adminPortal" class="glass-card hidden">
+      
+      <!-- Top Navigation Bar -->
+      <div class="portal-nav">
+        <div class="portal-status">
+          <span class="status-dot"></span>
+          <span><strong>डेटाबेस:</strong> Supabase लाइव कनेक्टेड</span>
+        </div>
+        <div class="portal-actions">
+          <a href="index.html" target="_blank" class="btn-nav-action" title="लाइव वेबसाइट देखें">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> लाइव वेबसाइट
+          </a>
+          <button type="button" id="btnLogout" class="btn-nav-action btn-logout" title="सत्र समाप्त करें">
+            <i class="fa-solid fa-power-off"></i> लॉगआउट
+          </button>
+        </div>
+      </div>
+
+      <!-- School Brand Header -->
+      <div class="brand-header">
+        <div class="brand-logo-wrap" style="width: 64px; height: 64px; margin-bottom: 8px;">
+          <img src="assets/images/bvn-crest.png" alt="विद्यालय प्रतीक" onerror="this.src='assets/images/logo.png'">
+        </div>
+        <h2 class="brand-title">भावेश विद्या निकेतन</h2>
+        <p class="brand-subtitle"><i class="fa-solid fa-sliders"></i> प्रशासनिक प्रबंधन एवं नियंत्रण प्रणाली</p>
+      </div>
+
+      <!-- Dynamic Feedback Banner -->
+      <div id="alertFeedback" class="alert-box">
+        <div class="alert-title" id="alertFeedbackTitle"></div>
+        <p id="alertFeedbackMessage"></p>
+        <div class="alert-actions" id="alertFeedbackActions" style="display: none;">
+          <a href="index.html" target="_blank" class="btn-alert-link">
+            <i class="fa-solid fa-eye"></i> वेबसाइट पर लाइव देखें
+          </a>
+        </div>
+      </div>
+
+      <!-- 3-Tabs Switcher Navigation -->
+      <nav class="admin-tabs-nav" aria-label="प्रशासनिक मॉड्यूल">
+        <button type="button" class="admin-tab-btn active" id="tabNoticesBtn" data-tab="tabNotices">
+          <i class="fa-solid fa-bullhorn"></i>
+          <span>सूचना प्रबंधन (Notices)</span>
+          <span class="tab-badge" id="noticesTabBadge">0</span>
+        </button>
+        <button type="button" class="admin-tab-btn" id="tabEnquiriesBtn" data-tab="tabEnquiries">
+          <i class="fa-solid fa-clipboard-user"></i>
+          <span>दाखिला पूछताछ (Enquiries)</span>
+          <span class="tab-badge" id="enquiriesTabBadge">0</span>
+        </button>
+        <button type="button" class="admin-tab-btn" id="tabGalleryBtn" data-tab="tabGallery">
+          <i class="fa-solid fa-images"></i>
+          <span>चित्र दीर्घा प्रबंधन (Gallery)</span>
+          <span class="tab-badge" id="galleryTabBadge">0</span>
+        </button>
+      </nav>
+
+      <!-- ==================================================================
+           TAB PANEL 1: सूचना प्रबंधन (NOTICE BOARD MANAGER)
+           ================================================================== -->
+      <div id="tabNotices" class="admin-tab-panel">
+        
+        <!-- Notice Add Form -->
+        <form id="noticePublishForm" autocomplete="off" style="margin-bottom: 30px;">
+          <div class="form-group">
+            <label for="noticeTitle" class="form-label">
+              सूचना शीर्षक (Notice Title) <span class="req">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="noticeTitle" 
+              class="form-control" 
+              placeholder="उदा. कक्षा 10वीं प्री-बोर्ड परीक्षा समय-सारणी" 
+              required
+              maxlength="200"
+            >
+            <div class="form-hint">संक्षिप्त और स्पष्ट शीर्षक लिखें जो विद्यार्थी व अभिभावक तुरंत समझ सकें।</div>
+          </div>
+
+          <div class="form-group">
+            <label for="noticeTagSelect" class="form-label">
+              श्रेणी / टैग (Category / Tag) <span class="req">*</span>
+            </label>
+            <select id="noticeTagSelect" class="form-control" required>
+              <option value="नया अपडेट" selected>नया अपडेट</option>
+              <option value="परीक्षा">परीक्षा (Examinations)</option>
+              <option value="अवकाश">अवकाश (Holidays / Vacation)</option>
+              <option value="सूचना">सामान्य सूचना (General Notice)</option>
+              <option value="प्रवेश 2027-28">प्रवेश 2027-28 (Admissions)</option>
+              <option value="छात्रवृत्ति">छात्रवृत्ति व पुरस्कार (Scholarships)</option>
+              <option value="खेलकूद">खेलकूद व सांस्कृतिक (Sports & Events)</option>
+              <option value="custom">-- अन्य (कस्टम टैग लिखें) --</option>
+            </select>
+            
+            <div id="customTagWrap" class="custom-tag-wrap">
+              <input 
+                type="text" 
+                id="customTagInput" 
+                class="form-control" 
+                placeholder="नया कस्टम टैग नाम लिखें (उदा. परिणाम / शुल्क)"
+                maxlength="40"
+              >
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="noticeDetails" class="form-label">
+              सूचना का पूर्ण विवरण (Notice Details) <span class="req">*</span>
+            </label>
+            <textarea 
+              id="noticeDetails" 
+              class="form-control" 
+              rows="4" 
+              placeholder="उदा. सत्र 2026-27 की प्री-बोर्ड परीक्षाएं 15 नवंबर से आयोजित होंगी। सभी विद्यार्थी समय-सारणी अनुसार अपनी तैयारी सुनिश्चित करें..."
+              required
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="noticeLink" class="form-label">
+              कार्रवाई / लिंक URL (Action / Link URL) <span style="font-weight:400; color:var(--text-muted);">(वैकल्पिक)</span>
+            </label>
+            <input 
+              type="text" 
+              id="noticeLink" 
+              class="form-control" 
+              placeholder="उदा. index.html#admission-section या #" 
+              value="#"
+            >
+            <div class="form-hint">यदि सूचना में कोई डाउनलोड या लिंक जोड़ना हो तो यहाँ URL दर्ज करें (डिफ़ॉल्ट # छोड़ सकते हैं)।</div>
+          </div>
+
+          <button type="submit" id="btnSubmitNotice" class="btn-submit">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>सूचना प्रकाशित करें (Publish Notice)</span>
+          </button>
+        </form>
+
+        <!-- Active Notices List Sub-section -->
+        <section class="notices-preview-section" style="border-top: 1px solid rgba(212, 175, 55, 0.25); padding-top: 24px;">
+          <div class="section-title-wrap">
+            <h3 class="section-title">
+              <i class="fa-solid fa-list-check"></i>
+              <span>वर्तमान में सक्रिय सूचनाएं (Active Notices)</span>
+              <span id="noticesCountBadge" class="badge-count">0</span>
+            </h3>
+            <button type="button" id="btnRefreshList" class="btn-refresh" title="सूचनाएं रीफ्रेश करें">
+              <i class="fa-solid fa-rotate-right" id="refreshIcon"></i> रीफ्रेश करें
+            </button>
+          </div>
+
+          <div id="liveNoticesList">
+            <div class="empty-state">
+              <i class="fa-solid fa-spinner fa-spin"></i>
+              <p>डेटाबेस से सक्रिय सूचनाएं लोड हो रही हैं...</p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- ==================================================================
+           TAB PANEL 2: दाखिला व संपर्क पूछताछ (ADMISSION & CONTACT ENQUIRIES)
+           ================================================================== -->
+      <div id="tabEnquiries" class="admin-tab-panel hidden">
+        
+        <div class="section-title-wrap">
+          <h3 class="section-title">
+            <i class="fa-solid fa-clipboard-user"></i>
+            <span>दाखिला व संपर्क पूछताछ (Active Enquiries)</span>
+            <span id="enquiriesCountBadge" class="badge-count">0</span>
+          </h3>
+          <button type="button" id="btnRefreshEnquiries" class="btn-refresh" title="पूछताछ सूची रीफ्रेश करें">
+            <i class="fa-solid fa-rotate-right" id="refreshEnqIcon"></i> रीफ्रेश करें
+          </button>
+        </div>
+
+        <div id="liveEnquiriesList">
+          <div class="empty-state">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>डेटाबेस से पूछताछ रिकॉर्ड लोड हो रहे हैं...</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ==================================================================
+           TAB PANEL 3: चित्र दीर्घा प्रबंधन (PHOTO GALLERY MANAGER)
+           ================================================================== -->
+      <div id="tabGallery" class="admin-tab-panel hidden">
+        
+        <!-- Photo Upload Form -->
+        <form id="photoUploadForm" autocomplete="off" style="margin-bottom: 30px;">
+          
+          <!-- Field 1: Photo Title -->
+          <div class="form-group">
+            <label for="photoTitle" class="form-label">
+              तस्वीर का शीर्षक (Photo Title) <span class="req">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="photoTitle" 
+              class="form-control" 
+              placeholder="उदा. रोबोटिक्स वर्कशॉप 2026 या वार्षिक क्रीड़ा उत्सव" 
+              required
+              maxlength="200"
+            >
+          </div>
+
+          <!-- Field 2: Category Dropdown -->
+          <div class="form-group">
+            <label for="photoCategory" class="form-label">
+              तस्वीर की श्रेणी (Category) <span class="req">*</span>
+            </label>
+            <select id="photoCategory" class="form-control" required>
+              <option value="" disabled selected>श्रेणी का चयन करें (Select Category)</option>
+              <option value="अटल टिंकरिंग लैब (ATL)">अटल टिंकरिंग लैब (ATL)</option>
+              <option value="खेलकूद व खेल मैदान">खेलकूद व खेल मैदान</option>
+              <option value="वार्षिकोत्सव व प्रतिभा पर्व">वार्षिकोत्सव व प्रतिभा पर्व</option>
+              <option value="विज्ञान प्रयोगशाला">विज्ञान प्रयोगशाला</option>
+              <option value="डिजिटल लाइब्रेरी">डिजिटल लाइब्रेरी</option>
+              <option value="स्मार्ट क्लासरूम">स्मार्ट क्लासरूम</option>
+              <option value="अन्य कार्यक्रम व सेमिनार">अन्य कार्यक्रम व सेमिनार</option>
+            </select>
+          </div>
+
+          <!-- Field 3: Image File Picker with Drag & Drop & Live Preview -->
+          <div class="form-group">
+            <label class="form-label">
+              तस्वीर फ़ाइल चुनें (Image File) <span class="req">*</span>
+            </label>
+            <div class="file-drop-zone" id="fileDropZone">
+              <input type="file" id="photoFileInput" accept="image/*" required>
+              <div class="drop-zone-icon">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+              </div>
+              <div class="drop-zone-text" id="dropZoneText">यहाँ तस्वीर क्लिक करके चुनें या ड्रैग करें</div>
+              <div class="drop-zone-sub">समर्थित फ़ॉर्मेट: JPG, PNG, WEBP (अधिकतम 10MB)</div>
+            </div>
+
+            <!-- Preview Card -->
+            <div class="file-preview-card" id="filePreviewCard">
+              <img src="" alt="तस्वीर पूर्वावलोकन" class="file-preview-thumb" id="filePreviewThumb">
+              <div class="file-preview-info">
+                <div class="file-preview-name" id="filePreviewName">image.jpg</div>
+                <div class="file-preview-size" id="filePreviewSize">0 KB</div>
+              </div>
+              <button type="button" class="btn-refresh" id="btnClearPhotoFile" style="padding: 4px 8px;" title="फ़ाइल हटाएं">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Upload Submit Button -->
+          <button type="submit" id="btnUploadPhoto" class="btn-submit">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>तस्वीर अपलोड करें (Upload Photo)</span>
+          </button>
+
+        </form>
+
+        <!-- Active Gallery Photos Sub-section -->
+        <section class="notices-preview-section" style="border-top: 1px solid rgba(212, 175, 55, 0.25); padding-top: 24px;">
+          <div class="section-title-wrap">
+            <h3 class="section-title">
+              <i class="fa-solid fa-images"></i>
+              <span>अपलोड की गई तस्वीरें (Uploaded Photos)</span>
+              <span id="galleryCountBadge" class="badge-count">0</span>
+            </h3>
+            <button type="button" id="btnRefreshGallery" class="btn-refresh" title="चित्र दीर्घा रीफ्रेश करें">
+              <i class="fa-solid fa-rotate-right" id="refreshGalIcon"></i> रीफ्रेश करें
+            </button>
+          </div>
+
+          <div id="liveGalleryList">
+            <div class="empty-state">
+              <i class="fa-solid fa-spinner fa-spin"></i>
+              <p>डेटाबेस से चित्र दीर्घा लोड हो रही है...</p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+    </div>
+
+    <!-- Footer Copyright -->
+    <footer class="portal-footer">
+      <p>&copy; 2026 भावेश विद्या निकेतन, कांकेर (छ.ग.) | प्रशासनिक प्रबंधन मॉड्यूल</p>
+    </footer>
+
+  </div>
+
+  <!-- ==========================================================================
+       Inline JavaScript: PIN Auth, Tabs, Notices, Enquiries & Gallery CRUD
+       ========================================================================== -->
+  <script>
+    // --------------------------------------------------------------------------
+    // 1. Configuration & Supabase Initialization
+    // --------------------------------------------------------------------------
+    const SUPABASE_URL = "https://cfnwqvbinndatfultvgn.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_aVohEYyuf7ecGan46pjhbQ_6EAsK9Cp";
+    
+    // Configured Admin PIN
+    const ADMIN_DEFAULT_PIN = "9876";
+    const SESSION_AUTH_KEY = "bvn_admin_authenticated";
+
+    // Initialize Supabase Client
+    var supabase = (window.supabase && typeof window.supabase.createClient === 'function')
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+      : null;
+
+    // DOM Elements - Authentication
+    const authCard = document.getElementById('authCard');
+    const adminPortal = document.getElementById('adminPortal');
+    const adminPinInput = document.getElementById('adminPinInput');
+    const btnUnlock = document.getElementById('btnUnlock');
+    const btnTogglePin = document.getElementById('btnTogglePin');
+    const pinEyeIcon = document.getElementById('pinEyeIcon');
+    const pinErrorAlert = document.getElementById('pinErrorAlert');
+    const btnLogout = document.getElementById('btnLogout');
+
+    // DOM Elements - Tabs
+    const tabBtns = document.querySelectorAll('.admin-tab-btn');
+    const tabPanels = document.querySelectorAll('.admin-tab-panel');
+    const noticesTabBadge = document.getElementById('noticesTabBadge');
+    const enquiriesTabBadge = document.getElementById('enquiriesTabBadge');
+    const galleryTabBadge = document.getElementById('galleryTabBadge');
+
+    // DOM Elements - Notice Form
+    const noticePublishForm = document.getElementById('noticePublishForm');
+    const noticeTitle = document.getElementById('noticeTitle');
+    const noticeTagSelect = document.getElementById('noticeTagSelect');
+    const customTagWrap = document.getElementById('customTagWrap');
+    const customTagInput = document.getElementById('customTagInput');
+    const noticeDetails = document.getElementById('noticeDetails');
+    const noticeLink = document.getElementById('noticeLink');
+    const btnSubmitNotice = document.getElementById('btnSubmitNotice');
+
+    // DOM Elements - Gallery Form
+    const photoUploadForm = document.getElementById('photoUploadForm');
+    const photoTitle = document.getElementById('photoTitle');
+    const photoCategory = document.getElementById('photoCategory');
+    const photoFileInput = document.getElementById('photoFileInput');
+    const fileDropZone = document.getElementById('fileDropZone');
+    const filePreviewCard = document.getElementById('filePreviewCard');
+    const filePreviewThumb = document.getElementById('filePreviewThumb');
+    const filePreviewName = document.getElementById('filePreviewName');
+    const filePreviewSize = document.getElementById('filePreviewSize');
+    const btnClearPhotoFile = document.getElementById('btnClearPhotoFile');
+    const btnUploadPhoto = document.getElementById('btnUploadPhoto');
+
+    // DOM Elements - Feedback & Lists
+    const alertFeedback = document.getElementById('alertFeedback');
+    const alertFeedbackTitle = document.getElementById('alertFeedbackTitle');
+    const alertFeedbackMessage = document.getElementById('alertFeedbackMessage');
+    const alertFeedbackActions = document.getElementById('alertFeedbackActions');
+    
+    const liveNoticesList = document.getElementById('liveNoticesList');
+    const noticesCountBadge = document.getElementById('noticesCountBadge');
+    const btnRefreshList = document.getElementById('btnRefreshList');
+    const refreshIcon = document.getElementById('refreshIcon');
+
+    const liveEnquiriesList = document.getElementById('liveEnquiriesList');
+    const enquiriesCountBadge = document.getElementById('enquiriesCountBadge');
+    const btnRefreshEnquiries = document.getElementById('btnRefreshEnquiries');
+    const refreshEnqIcon = document.getElementById('refreshEnqIcon');
+
+    const liveGalleryList = document.getElementById('liveGalleryList');
+    const galleryCountBadge = document.getElementById('galleryCountBadge');
+    const btnRefreshGallery = document.getElementById('btnRefreshGallery');
+    const refreshGalIcon = document.getElementById('refreshGalIcon');
+
+    // Helper: Feedback Alert Banner
+    function showFeedbackAlert(isSuccess, title, message, showLiveLink = false) {
+      alertFeedback.className = 'alert-box ' + (isSuccess ? 'alert-success' : 'alert-error');
+      alertFeedbackTitle.innerHTML = (isSuccess ? '<i class="fa-solid fa-circle-check"></i> ' : '<i class="fa-solid fa-triangle-exclamation"></i> ') + title;
+      alertFeedbackMessage.textContent = message;
+      alertFeedbackActions.style.display = showLiveLink ? 'flex' : 'none';
+      alertFeedback.style.display = 'block';
+
+      alertFeedback.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hideFeedbackAlert() {
+      alertFeedback.style.display = 'none';
+    }
+
+    // --------------------------------------------------------------------------
+    // 2. PIN Authentication Logic
+    // --------------------------------------------------------------------------
+    function unlockPortal() {
+      authCard.classList.add('hidden');
+      adminPortal.classList.remove('hidden');
+      sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
+      
+      // Load data for all 3 modules
+      loadActiveNotices();
+      loadActiveEnquiries();
+      loadActiveGallery();
+      
+      setTimeout(function() { noticeTitle.focus(); }, 150);
+    }
+
+    function checkStoredAuth() {
+      if (sessionStorage.getItem(SESSION_AUTH_KEY) === 'true') {
+        unlockPortal();
+      }
+    }
+
+    function verifyPin() {
+      const enteredPin = (adminPinInput.value || '').trim();
+      if (enteredPin === ADMIN_DEFAULT_PIN) {
+        pinErrorAlert.style.display = 'none';
+        adminPinInput.value = '';
+        unlockPortal();
+      } else {
+        pinErrorAlert.style.display = 'block';
+        adminPinInput.value = '';
+        adminPinInput.focus();
+      }
+    }
+
+    // Toggle PIN Visibility
+    btnTogglePin.addEventListener('click', function() {
+      if (adminPinInput.type === 'password') {
+        adminPinInput.type = 'text';
+        pinEyeIcon.className = 'fa-solid fa-eye-slash';
+      } else {
+        adminPinInput.type = 'password';
+        pinEyeIcon.className = 'fa-solid fa-eye';
+      }
+    });
+
+    btnUnlock.addEventListener('click', verifyPin);
+    adminPinInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        verifyPin();
+      }
+    });
+
+    // Logout Action
+    btnLogout.addEventListener('click', function() {
+      sessionStorage.removeItem(SESSION_AUTH_KEY);
+      adminPortal.classList.add('hidden');
+      authCard.classList.remove('hidden');
+      adminPinInput.value = '';
+      pinErrorAlert.style.display = 'none';
+      hideFeedbackAlert();
+      adminPinInput.focus();
+    });
+
+    // --------------------------------------------------------------------------
+    // 3. Tab Navigation Handler
+    // --------------------------------------------------------------------------
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetTabId = btn.getAttribute('data-tab');
+        
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabPanels.forEach(p => p.classList.add('hidden'));
+
+        btn.classList.add('active');
+        const targetPanel = document.getElementById(targetTabId);
+        if (targetPanel) {
+          targetPanel.classList.remove('hidden');
+        }
+
+        hideFeedbackAlert();
+
+        if (targetTabId === 'tabGallery') {
+          loadActiveGallery();
+        } else if (targetTabId === 'tabEnquiries') {
+          loadActiveEnquiries();
+        } else if (targetTabId === 'tabNotices') {
+          loadActiveNotices();
+        }
+      });
+    });
+
+    // Custom Tag Toggle (Notices)
+    noticeTagSelect.addEventListener('change', function() {
+      if (this.value === 'custom') {
+        customTagWrap.style.display = 'block';
+        customTagInput.focus();
+      } else {
+        customTagWrap.style.display = 'none';
+        customTagInput.value = '';
+      }
+    });
+
+    // --------------------------------------------------------------------------
+    // 4. Notices Module: Publish Notice
+    // --------------------------------------------------------------------------
+    noticePublishForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      hideFeedbackAlert();
+
+      const titleVal = (noticeTitle.value || '').trim();
+      let tagVal = noticeTagSelect.value;
+      if (tagVal === 'custom') {
+        tagVal = (customTagInput.value || '').trim() || 'सूचना';
+      }
+      const detailsVal = (noticeDetails.value || '').trim();
+      const linkVal = (noticeLink.value || '').trim() || '#';
+
+      if (!titleVal || !detailsVal) {
+        showFeedbackAlert(false, "अपूर्ण जानकारी!", "कृपया सूचना का शीर्षक और विवरण अनिवार्य रूप से भरें।");
+        return;
+      }
+
+      if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
+      if (!supabase) {
+        showFeedbackAlert(false, "कनेक्शन त्रुटि!", "Supabase डेटाबेस क्लाइंट लोड नहीं हो सका। कृपया इंटरनेट जांचें।");
+        return;
+      }
+
+      btnSubmitNotice.disabled = true;
+      const originalBtnHTML = btnSubmitNotice.innerHTML;
+      btnSubmitNotice.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>प्रकाशित हो रहा है...</span>';
+
+      try {
+        const insertPayload = {
+          title: titleVal,
+          details: detailsVal,
+          tag: tagVal
+        };
+
+        if (linkVal) {
+          insertPayload.link = linkVal;
+        }
+
+        let { data, error } = await supabase
+          .from('notices')
+          .insert([insertPayload]);
+
+        if (error && error.message && error.message.includes('link does not exist')) {
+          delete insertPayload.link;
+          const retryRes = await supabase
+            .from('notices')
+            .insert([insertPayload]);
+          error = retryRes.error;
+        }
+
+        if (error) throw error;
+
+        showFeedbackAlert(
+          true,
+          "सूचना सफलतापूर्वक पोर्टल पर लाइव कर दी गई!",
+          "यह सूचना अब विद्यालय की वेबसाइट पर सभी अभिभावकों व विद्यार्थियों को दिखाई दे रही है।",
+          true
+        );
+
+        noticePublishForm.reset();
+        customTagWrap.style.display = 'none';
+        noticeLink.value = '#';
+
+        await loadActiveNotices();
+
+      } catch (err) {
+        console.error("Notice Publish Error:", err);
+        showFeedbackAlert(false, "सूचना प्रकाशित करने में त्रुटि!", err.message || "डेटाबेस में सूचना सहेजने में समस्या आई।");
+      } finally {
+        btnSubmitNotice.disabled = false;
+        btnSubmitNotice.innerHTML = originalBtnHTML;
+      }
+    });
+
+    // Notices Module: Fetch & Render Active Notices
+    async function loadActiveNotices() {
+      if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
+      if (!supabase) return;
+
+      if (refreshIcon) refreshIcon.classList.add('fa-spin');
+
+      try {
+        const { data, error } = await supabase
+          .from('notices')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const count = Array.isArray(data) ? data.length : 0;
+        if (noticesCountBadge) noticesCountBadge.textContent = count;
+        if (noticesTabBadge) noticesTabBadge.textContent = count;
+
+        if (!data || data.length === 0) {
+          liveNoticesList.innerHTML = `
+            <div class="empty-state">
+              <i class="fa-solid fa-inbox"></i>
+              <p>वर्तमान में कोई सक्रिय सूचना उपलब्ध नहीं है। ऊपर दिए गए फ़ॉर्म से नई सूचना प्रकाशित करें।</p>
+            </div>
+          `;
+          return;
+        }
+
+        let html = '';
+        data.forEach(function(item) {
+          const rawDate = item.created_at ? new Date(item.created_at) : null;
+          const formattedDate = rawDate 
+            ? rawDate.toLocaleDateString('hi-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + 
+              rawDate.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' })
+            : 'हाल ही में';
+
+          const tagText = item.tag || 'सूचना';
+          const titleText = escapeHTML(item.title || 'शीर्षक रहित सूचना');
+          const detailsText = escapeHTML(item.details || '');
+          const linkText = item.link ? escapeHTML(item.link) : '';
+          const noticeId = item.id;
+
+          html += `
+            <article class="notice-card-item" id="notice-card-${noticeId}">
+              <div class="notice-card-top">
+                <div class="item-meta">
+                  <span class="item-tag"><i class="fa-solid fa-tag"></i> ${escapeHTML(tagText)}</span>
+                  <span class="item-date"><i class="fa-regular fa-clock"></i> ${formattedDate}</span>
+                </div>
+                <button type="button" class="btn-delete" id="btn-del-not-${noticeId}" onclick="deleteNoticeRecord(${noticeId})">
+                  <i class="fa-solid fa-trash-can"></i> हटाएं (Delete)
+                </button>
+              </div>
+              <h4 class="item-title">${titleText}</h4>
+              <p class="item-details">${detailsText}</p>
+              ${linkText && linkText !== '#' ? `<a href="${linkText}" target="_blank" class="item-link"><i class="fa-solid fa-arrow-up-right-from-square"></i> ${linkText}</a>` : ''}
+            </article>
+          `;
+        });
+
+        liveNoticesList.innerHTML = html;
+
+      } catch (err) {
+        console.warn("Failed to load active notices:", err);
+        liveNoticesList.innerHTML = `
+          <div class="empty-state" style="color: #fca5a5;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <p>सूचनाएं लोड करने में त्रुटि: ${escapeHTML(err.message || 'डेटाबेस समस्या')}</p>
+          </div>
+        `;
+      } finally {
+        if (refreshIcon) {
+          setTimeout(function() { refreshIcon.classList.remove('fa-spin'); }, 400);
+        }
+      }
+    }
+
+    btnRefreshList.addEventListener('click', loadActiveNotices);
+
+    async function deleteNoticeRecord(noticeId) {
+      if (!noticeId) return;
+
+      const confirmed = confirm("क्या आप वाकई इस सूचना को हटाना चाहते हैं?");
+      if (!confirmed) return;
+
+      const delBtn = document.getElementById('btn-del-not-' + noticeId);
+      if (delBtn) {
+        delBtn.disabled = true;
+        delBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> हटा रहे हैं...';
+      }
+
+      try {
+        if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+        if (!supabase) throw new Error("डेटाबेस क्लाइंट उपलब्ध नहीं है।");
+
+        const { error } = await supabase
+          .from('notices')
+          .delete()
+          .eq('id', noticeId);
+
+        if (error) throw error;
+
+        showFeedbackAlert(
+          true,
+          "सूचना सफलतापूर्वक हटा दी गई!",
+          "चयनित सूचना डेटाबेस एवं लाइव वेबसाइट से हटा दी गई है।"
+        );
+
+        await loadActiveNotices();
+
+      } catch (err) {
+        console.error("Delete notice error:", err);
+        showFeedbackAlert(
+          false,
+          "सूचना हटाने में त्रुटि!",
+          err.message || "डेटाबेस से सूचना हटाने में समस्या आई।"
+        );
+        if (delBtn) {
+          delBtn.disabled = false;
+          delBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i> हटाएं (Delete)';
+        }
+      }
+    }
+    window.deleteNoticeRecord = deleteNoticeRecord;
+
+    // --------------------------------------------------------------------------
+    // 5. Enquiries Module: Fetch & Render Active Admission Enquiries
+    // --------------------------------------------------------------------------
+    async function loadActiveEnquiries() {
+      if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
+      if (!supabase) return;
+
+      if (refreshEnqIcon) refreshEnqIcon.classList.add('fa-spin');
+
+      try {
+        const { data, error } = await supabase
+          .from('enquiries')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const count = Array.isArray(data) ? data.length : 0;
+        if (enquiriesCountBadge) enquiriesCountBadge.textContent = count;
+        if (enquiriesTabBadge) enquiriesTabBadge.textContent = count;
+
+        if (!data || data.length === 0) {
+          liveEnquiriesList.innerHTML = `
+            <div class="empty-state">
+              <i class="fa-solid fa-inbox"></i>
+              <p>वर्तमान में कोई नई पूछताछ उपलब्ध नहीं है।</p>
+            </div>
+          `;
+          return;
+        }
+
+        let html = '';
+        data.forEach(function(item) {
+          const rawDate = item.created_at ? new Date(item.created_at) : null;
+          const formattedDate = rawDate 
+            ? rawDate.toLocaleDateString('hi-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + 
+              rawDate.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' })
+            : 'हाल ही में';
+
+          const nameText = escapeHTML(item.name || 'अज्ञात नाम');
+          const phoneRaw = String(item.phone || '').replace(/\D/g, '');
+          const phoneDisplay = escapeHTML(item.phone || 'उपलब्ध नहीं');
+          const classGradeText = escapeHTML(item.class_grade || 'सामान्य प्रवेश');
+          const messageText = escapeHTML(item.message || 'कोई अतिरिक्त संदेश नहीं लिखा गया।');
+          const enquiryId = item.id;
+
+          const waClean = phoneRaw.length === 10 ? phoneRaw : (phoneRaw.startsWith('91') && phoneRaw.length === 12 ? phoneRaw.slice(2) : phoneRaw);
+          const waLink = waClean.length === 10 
+            ? `https://wa.me/91${waClean}?text=${encodeURIComponent('नमस्ते ' + (item.name || '') + ', भावेश विद्या निकेतन में आपकी दाखिला पूछताछ के संदर्भ में...')}`
+            : null;
+
+          html += `
+            <article class="enquiry-card-item" id="enquiry-card-${enquiryId}">
+              <div class="enquiry-card-top">
+                <div class="enquiry-meta">
+                  <span class="badge-grade"><i class="fa-solid fa-school"></i> ${classGradeText}</span>
+                  <span class="item-date"><i class="fa-regular fa-clock"></i> ${formattedDate}</span>
+                </div>
+                <button type="button" class="btn-delete" id="btn-del-enq-${enquiryId}" onclick="deleteEnquiryRecord(${enquiryId})">
+                  <i class="fa-solid fa-trash-can"></i> हटाएं (Delete)
+                </button>
+              </div>
+              
+              <div class="enquiry-info-grid">
+                <div class="enquiry-name">
+                  <i class="fa-solid fa-user-graduate" style="color: var(--gold-primary);"></i>
+                  <span>${nameText}</span>
+                </div>
+                <div class="enquiry-phone">
+                  <i class="fa-solid fa-phone" style="color: var(--gold-primary);"></i>
+                  <a href="tel:${phoneRaw}" class="phone-link" title="सीधे कॉल करें">
+                    <i class="fa-solid fa-phone-volume"></i> +91 ${phoneDisplay}
+                  </a>
+                  ${waLink ? `
+                    <a href="${waLink}" target="_blank" class="btn-wa-shortcut" title="व्हाट्सएप पर बात करें">
+                      <i class="fa-brands fa-whatsapp"></i> व्हाट्सएप
+                    </a>
+                  ` : ''}
+                </div>
+              </div>
+
+              <div class="enquiry-message-box">
+                <div class="enquiry-message-label">
+                  <i class="fa-regular fa-comment-dots"></i> अभिभावक / विद्यार्थी का संदेश:
+                </div>
+                <p style="margin: 0; color: #f1f5f9;">${messageText}</p>
+              </div>
+            </article>
+          `;
+        });
+
+        liveEnquiriesList.innerHTML = html;
+
+      } catch (err) {
+        console.warn("Failed to load active enquiries:", err);
+        liveEnquiriesList.innerHTML = `
+          <div class="empty-state" style="color: #fca5a5;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <p>पूछताछ लोड करने में समस्या: ${escapeHTML(err.message || 'डेटाबेस त्रुटि')}</p>
+          </div>
+        `;
+      } finally {
+        if (refreshEnqIcon) {
+          setTimeout(function() { refreshEnqIcon.classList.remove('fa-spin'); }, 400);
+        }
+      }
+    }
+
+    btnRefreshEnquiries.addEventListener('click', loadActiveEnquiries);
+
+    async function deleteEnquiryRecord(enquiryId) {
+      if (!enquiryId) return;
+
+      const confirmed = confirm("क्या आप वाकई इस दाखिला/संपर्क पूछताछ को हटाना चाहते हैं?");
+      if (!confirmed) return;
+
+      const delBtn = document.getElementById('btn-del-enq-' + enquiryId);
+      if (delBtn) {
+        delBtn.disabled = true;
+        delBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> हटा रहे हैं...';
+      }
+
+      try {
+        if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+        if (!supabase) throw new Error("डेटाबेस क्लाइंट लोड नहीं हो सका।");
+
+        const { error } = await supabase
+          .from('enquiries')
+          .delete()
+          .eq('id', enquiryId);
+
+        if (error) throw error;
+
+        showFeedbackAlert(
+          true,
+          "पूछताछ सफलतापूर्वक हटा दी गई!",
+          "चयनित पूछताछ रिकॉर्ड डेटाबेस से हटा दिया गया है।"
+        );
+
+        await loadActiveEnquiries();
+
+      } catch (err) {
+        console.error("Delete enquiry error:", err);
+        showFeedbackAlert(
+          false,
+          "पूछताछ हटाने में त्रुटि!",
+          err.message || "डेटाबेस से पूछताछ हटाने में समस्या आई।"
+        );
+        if (delBtn) {
+          delBtn.disabled = false;
+          delBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i> हटाएं (Delete)';
+        }
+      }
+    }
+    window.deleteEnquiryRecord = deleteEnquiryRecord;
+
+    // --------------------------------------------------------------------------
+    // 6. Photo Gallery Module: Upload & Storage Logic
+    // --------------------------------------------------------------------------
+    // File Picker Preview Handler
+    photoFileInput.addEventListener('change', function(e) {
+      const file = this.files && this.files[0];
+      if (file) {
+        filePreviewName.textContent = file.name;
+        filePreviewSize.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+        
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          filePreviewThumb.src = evt.target.result;
+          filePreviewCard.style.display = 'flex';
+          fileDropZone.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    btnClearPhotoFile.addEventListener('click', function() {
+      photoFileInput.value = '';
+      filePreviewCard.style.display = 'none';
+      fileDropZone.style.display = 'block';
+    });
+
+    // Upload Photo to Supabase Storage ('school-gallery') & Insert to Table ('gallery')
+    photoUploadForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      hideFeedbackAlert();
+
+      const titleVal = (photoTitle.value || '').trim();
+      const categoryVal = (photoCategory.value || '').trim();
+      const file = photoFileInput.files && photoFileInput.files[0];
+
+      if (!titleVal || !categoryVal) {
+        showFeedbackAlert(false, "अपूर्ण जानकारी!", "कृपया तस्वीर का शीर्षक और श्रेणी अवश्य चुनें।");
+        return;
+      }
+
+      if (!file) {
+        showFeedbackAlert(false, "तस्वीर चुनें!", "कृपया अपलोड करने हेतु एक तस्वीर फ़ाइल चुनें।");
+        return;
+      }
+
+      // Check client
+      if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
+      if (!supabase) {
+        showFeedbackAlert(false, "कनेक्शन त्रुटि!", "Supabase क्लाइंट लोड नहीं हो सका।");
+        return;
+      }
+
+      // Button loading state
+      btnUploadPhoto.disabled = true;
+      const originalUploadBtnHTML = btnUploadPhoto.innerHTML;
+      btnUploadPhoto.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>अपलोड हो रहा है...</span>';
+
+      try {
+        // Generate unique filename: timestamp_cleaned_filename
+        const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const fileName = `${Date.now()}_${cleanName}`;
+
+        // 1. Upload to Supabase Storage bucket 'school-gallery'
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('school-gallery')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        // 2. Get Public URL
+        const { data: publicUrlData } = supabase.storage
+          .from('school-gallery')
+          .getPublicUrl(fileName);
+
+        const publicImageUrl = publicUrlData ? publicUrlData.publicUrl : '';
+
+        // 3. Insert row into 'gallery' table
+        const { error: insertError } = await supabase
+          .from('gallery')
+          .insert([{
+            title: titleVal,
+            category: categoryVal,
+            image_url: publicImageUrl,
+            storage_path: fileName
+          }]);
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        // Success Feedback
+        showFeedbackAlert(
+          true,
+          "तस्वीर सफलतापूर्वक अपलोड हो गई!",
+          "नई तस्वीर विद्यालय की चित्र दीर्घा में लाइव हो गई है।"
+        );
+
+        // Reset form & preview
+        photoUploadForm.reset();
+        filePreviewCard.style.display = 'none';
+        fileDropZone.style.display = 'block';
+
+        // Refresh gallery grid immediately
+        await loadActiveGallery();
+
+      } catch (err) {
+        console.error("Photo Upload Error:", err);
+        let errorMsg = err.message || "तस्वीर अपलोड करने में समस्या आई।";
+        if (errorMsg.includes("Bucket not found")) {
+          errorMsg = "Supabase Storage में 'school-gallery' बकेट नहीं मिला। कृपया Supabase डैशबोर्ड (Storage) में जाकर 'school-gallery' नाम का Public बकेट बनाएं।";
+        }
+        showFeedbackAlert(false, "अपलोड त्रुटि!", errorMsg);
+      } finally {
+        btnUploadPhoto.disabled = false;
+        btnUploadPhoto.innerHTML = originalUploadBtnHTML;
+      }
+    });
+
+    // --------------------------------------------------------------------------
+    // 7. Photo Gallery Module: Fetch & Render Uploaded Photos
+    // --------------------------------------------------------------------------
+    async function loadActiveGallery() {
+      if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
+      if (!supabase) return;
+
+      if (refreshGalIcon) refreshGalIcon.classList.add('fa-spin');
+
+      try {
+        const { data, error } = await supabase
+          .from('gallery')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const count = Array.isArray(data) ? data.length : 0;
+        if (galleryCountBadge) galleryCountBadge.textContent = count;
+        if (galleryTabBadge) galleryTabBadge.textContent = count;
+
+        if (!data || data.length === 0) {
+          liveGalleryList.innerHTML = `
+            <div class="empty-state">
+              <i class="fa-solid fa-images"></i>
+              <p>चित्र दीर्घा में वर्तमान में कोई तस्वीर उपलब्ध नहीं है। ऊपर दिए गए फ़ॉर्म से नई तस्वीर अपलोड करें।</p>
+            </div>
+          `;
+          return;
+        }
+
+        let html = '<div class="gallery-grid">';
+        data.forEach(function(item) {
+          const rawDate = item.created_at ? new Date(item.created_at) : null;
+          const formattedDate = rawDate 
+            ? rawDate.toLocaleDateString('hi-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+            : 'हाल ही में';
+
+          const titleText = escapeHTML(item.title || 'विद्यालय गतिविधि');
+          const categoryText = escapeHTML(item.category || 'कैंपस');
+          const imgUrl = item.image_url || 'assets/images/logo.png';
+          const photoId = item.id;
+          const storagePath = item.storage_path || '';
+
+          html += `
+            <div class="photo-card-item" id="photo-card-${photoId}">
+              <div class="photo-card-thumb-wrap">
+                <img src="${imgUrl}" alt="${titleText}" class="photo-card-thumb" loading="lazy" onerror="this.src='assets/images/logo.png'">
+                <span class="photo-card-badge">${categoryText}</span>
+              </div>
+              <div class="photo-card-content">
+                <h4 class="photo-card-title">${titleText}</h4>
+                <div class="photo-card-bottom">
+                  <span><i class="fa-regular fa-calendar-days"></i> ${formattedDate}</span>
+                  <button type="button" class="btn-delete" id="btn-del-photo-${photoId}" onclick="deleteGalleryPhoto(${photoId}, '${escapeHTML(storagePath)}')">
+                    <i class="fa-solid fa-trash-can"></i> हटाएं
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        html += '</div>';
+
+        liveGalleryList.innerHTML = html;
+
+      } catch (err) {
+        console.warn("Failed to load gallery photos:", err);
+        liveGalleryList.innerHTML = `
+          <div class="empty-state" style="color: #fca5a5;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <p>चित्र दीर्घा लोड करने में समस्या: ${escapeHTML(err.message || 'डेटाबेस त्रुटि')}</p>
+          </div>
+        `;
+      } finally {
+        if (refreshGalIcon) {
+          setTimeout(function() { refreshGalIcon.classList.remove('fa-spin'); }, 400);
+        }
+      }
+    }
+
+    btnRefreshGallery.addEventListener('click', loadActiveGallery);
+
+    // Delete Photo from Supabase Storage & Database
+    async function deleteGalleryPhoto(photoId, storagePath) {
+      if (!photoId) return;
+
+      const confirmed = confirm("क्या आप वाकई इस तस्वीर को चित्र दीर्घा से हटाना चाहते हैं?");
+      if (!confirmed) return;
+
+      const delBtn = document.getElementById('btn-del-photo-' + photoId);
+      if (delBtn) {
+        delBtn.disabled = true;
+        delBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> हटा रहे हैं...';
+      }
+
+      try {
+        if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+        if (!supabase) throw new Error("डेटाबेस क्लाइंट लोड नहीं हो सका।");
+
+        // 1. Delete from Supabase Storage 'school-gallery'
+        if (storagePath) {
+          const { error: storageError } = await supabase.storage
+            .from('school-gallery')
+            .remove([storagePath]);
+
+          if (storageError) {
+            console.warn("Storage removal notice:", storageError);
+          }
+        }
+
+        // 2. Delete from 'gallery' table
+        const { error: dbError } = await supabase
+          .from('gallery')
+          .delete()
+          .eq('id', photoId);
+
+        if (dbError) throw dbError;
+
+        showFeedbackAlert(
+          true,
+          "तस्वीर सफलतापूर्वक हटा दी गई!",
+          "चयनित तस्वीर चित्र दीर्घा एवं स्टोरेज से हटा दी गई है।"
+        );
+
+        await loadActiveGallery();
+
+      } catch (err) {
+        console.error("Delete photo error:", err);
+        showFeedbackAlert(
+          false,
+          "तस्वीर हटाने में त्रुटि!",
+          err.message || "तस्वीर हटाने में समस्या आई।"
+        );
+        if (delBtn) {
+          delBtn.disabled = false;
+          delBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i> हटाएं';
+        }
+      }
+    }
+    window.deleteGalleryPhoto = deleteGalleryPhoto;
+
+    // Helper: HTML Escaper
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // --------------------------------------------------------------------------
+    // 8. Initialize on DOM Load
+    // --------------------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', checkStoredAuth);
+  </script>
+</body>
+</html>
