@@ -3984,7 +3984,9 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
   width: 100vw;
   height: 100vh;
   height: 100dvh;
-  background: rgba(4, 13, 24, 0.68);
+  background: rgba(3, 10, 18, 0.58);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 999990;
   opacity: 0;
   visibility: hidden;
@@ -6033,4 +6035,465 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
   .lightbox-visual {
     height: 240px;
   }
+}
+
+/* ==========================================================================
+   23. n8n AI Admissions Counselor Floating Chat Widget Theme
+   ========================================================================== */
+:root {
+  --chat--color-primary: #08182b;
+  --chat--color-primary-shade-50: #0d2540;
+  --chat--color-secondary: #D4AF37;
+  --chat--color-white: #ffffff;
+  --chat--color-light: #f8fafc;
+  --chat--color-dark: #08182b;
+  --chat--border-radius: 16px;
+  --chat--header--background: #08182b;
+  --chat--header--color: #FEF08A;
+}
+
+.chat-window {
+  z-index: 100000 !important;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.45), 0 0 25px rgba(212, 175, 55, 0.25) !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.45) !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+.chat-toggle-button {
+  z-index: 99999 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 18px rgba(212, 175, 55, 0.4) !important;
+  border: 2px solid #D4AF37 !important;
+  background: #08182b !important;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast) !important;
+}
+
+.chat-toggle-button:hover {
+  transform: scale(1.06) !important;
+}
+
+@media (max-width: 768px) {
+  .chat-toggle-button {
+    bottom: 74px !important;
+    right: 14px !important;
+  }
+  .chat-window {
+    bottom: 135px !important;
+    right: 8px !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100vh - 150px) !important;
+  }
+}
+
+/* ==========================================================================
+   24. 24/7 AI Voice Admissions Receptionist ("नैना" Voice AI)
+   ========================================================================== */
+.btn-naina-voice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #0b1f38 0%, #16365c 100%);
+  color: #fef08a !important;
+  border: 1.5px solid #d4af37;
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-naina-voice:hover {
+  background: linear-gradient(135deg, #132e52 0%, #1d4677 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(212, 175, 55, 0.45);
+  color: #ffffff !important;
+}
+
+.voice-live-dot {
+  width: 9px;
+  height: 9px;
+  background-color: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #10b981;
+  animation: voiceLiveBlink 1.4s infinite;
+}
+
+@keyframes voiceLiveBlink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.btn-voice-hero {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(14, 34, 56, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 2px solid rgba(212, 175, 55, 0.85);
+  color: #ffffff;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(4, 13, 24, 0.4), 0 0 20px rgba(212, 175, 55, 0.25);
+  position: relative;
+  transition: all 0.35s ease;
+}
+
+.btn-voice-hero i {
+  font-size: 1.6rem;
+  color: #fef08a;
+  animation: pulseHeadset 2s infinite ease-in-out;
+}
+
+@keyframes pulseHeadset {
+  0%, 100% { transform: scale(1); color: #fef08a; }
+  50% { transform: scale(1.15); color: #d4af37; }
+}
+
+.btn-voice-hero:hover {
+  background: rgba(22, 50, 82, 0.95);
+  border-color: #fef08a;
+  transform: translateY(-3px);
+  box-shadow: 0 15px 35px rgba(8, 24, 43, 0.6), 0 0 30px rgba(212, 175, 55, 0.45);
+}
+
+.btn-voice-hero .btn-main-text {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.btn-voice-hero .btn-sub-text {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #fef08a;
+}
+
+/* Modal Backdrop & Card */
+.naina-voice-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 13, 24, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 100002;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.naina-voice-modal-backdrop.is-active {
+  display: flex;
+  opacity: 1;
+}
+
+.naina-voice-modal-card {
+  width: 100%;
+  max-width: 520px;
+  background: linear-gradient(180deg, #0a1c33 0%, #061222 100%);
+  border: 1.5px solid rgba(212, 175, 55, 0.65);
+  border-radius: 28px;
+  padding: 28px 24px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 40px rgba(212, 175, 55, 0.3);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  animation: nainaCardPop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes nainaCardPop {
+  0% { transform: scale(0.9) translateY(20px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.naina-call-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.naina-call-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 4px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  color: #34d399;
+  font-weight: 600;
+}
+
+.naina-call-status .live-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #10b981;
+  animation: voiceLiveBlink 1.2s infinite;
+}
+
+.naina-modal-close {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.naina-modal-close:hover {
+  background: #ef4444;
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+/* Siri / Gemini Glowing Orb Stage */
+.naina-avatar-stage {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin: 10px 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.naina-pulse-ring-outer {
+  position: absolute;
+  inset: -15px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0) 70%);
+  animation: nainaPulse 2.4s infinite ease-in-out;
+}
+
+.naina-pulse-ring-inner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px dashed rgba(212, 175, 55, 0.45);
+  animation: nainaRotate 12s linear infinite;
+}
+
+@keyframes nainaRotate {
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes nainaPulse {
+  0%, 100% { transform: scale(0.95); opacity: 0.5; }
+  50% { transform: scale(1.2); opacity: 0.9; }
+}
+
+.naina-avatar-orb {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffd700 0%, #d4af37 45%, #08182b 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 35px rgba(212, 175, 55, 0.65), inset 0 0 15px rgba(255, 255, 255, 0.5);
+  z-index: 2;
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+.naina-avatar-orb i {
+  font-size: 2.4rem;
+  color: #040d18;
+}
+
+.naina-avatar-stage.is-speaking .naina-avatar-orb {
+  animation: nainaSpeakingOrb 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes nainaSpeakingOrb {
+  0% { transform: scale(1); box-shadow: 0 0 25px rgba(212, 175, 55, 0.5); }
+  100% { transform: scale(1.12); box-shadow: 0 0 50px rgba(254, 240, 138, 0.85); }
+}
+
+/* Soundwave animation */
+.naina-soundwave {
+  position: absolute;
+  bottom: -15px;
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+  height: 24px;
+  z-index: 3;
+}
+
+.naina-soundwave span {
+  width: 4px;
+  height: 4px;
+  background-color: #fef08a;
+  border-radius: 2px;
+  transition: height 0.2s ease;
+}
+
+.naina-avatar-stage.is-speaking .naina-soundwave span:nth-child(1) { animation: waveAnim 0.7s infinite 0.1s; }
+.naina-avatar-stage.is-speaking .naina-soundwave span:nth-child(2) { animation: waveAnim 0.7s infinite 0.3s; }
+.naina-avatar-stage.is-speaking .naina-soundwave span:nth-child(3) { animation: waveAnim 0.7s infinite 0.2s; }
+.naina-avatar-stage.is-speaking .naina-soundwave span:nth-child(4) { animation: waveAnim 0.7s infinite 0.4s; }
+.naina-avatar-stage.is-speaking .naina-soundwave span:nth-child(5) { animation: waveAnim 0.7s infinite 0.15s; }
+
+@keyframes waveAnim {
+  0%, 100% { height: 4px; }
+  50% { height: 22px; background-color: #d4af37; }
+}
+
+.naina-info-wrap {
+  margin-bottom: 16px;
+}
+
+.naina-name {
+  font-family: var(--font-hindi-heading);
+  font-size: 1.6rem;
+  color: #fef08a;
+  margin-bottom: 2px;
+}
+
+.naina-designation {
+  font-size: 0.88rem;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.naina-institute {
+  font-size: 0.78rem;
+  color: #d4af37;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Transcript Box */
+.naina-transcript-box {
+  width: 100%;
+  min-height: 110px;
+  max-height: 160px;
+  overflow-y: auto;
+  background: rgba(4, 13, 24, 0.6);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.naina-bubble {
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.naina-bot-msg {
+  background: rgba(22, 50, 82, 0.7);
+  border-left: 3px solid #d4af37;
+  color: #f8fafc;
+}
+
+.naina-user-msg {
+  background: rgba(16, 185, 129, 0.15);
+  border-right: 3px solid #10b981;
+  color: #6ee7b7;
+  align-self: flex-end;
+}
+
+/* Interactive Control Bar */
+.naina-controls-row {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.naina-mic-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #d4af37 0%, #b38f26 100%);
+  color: #040d18;
+  border: none;
+  padding: 14px 28px;
+  border-radius: var(--radius-pill);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.45);
+  transition: all 0.25s ease;
+}
+
+.naina-mic-btn:hover {
+  background: linear-gradient(135deg, #fef08a 0%, #d4af37 100%);
+  transform: scale(1.04);
+  box-shadow: 0 8px 25px rgba(212, 175, 55, 0.65);
+}
+
+.naina-mic-btn.is-listening {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  color: #ffffff;
+  animation: micListenPulse 1.2s infinite;
+}
+
+@keyframes micListenPulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.6); }
+  50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.95); transform: scale(1.06); }
+}
+
+.naina-end-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  padding: 12px 20px;
+  border-radius: var(--radius-pill);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.naina-end-btn:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.naina-call-footer {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }

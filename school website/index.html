@@ -181,7 +181,7 @@
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="style.css?v=20261106_menu_fix">
+  <link rel="stylesheet" href="style.css?v=20261107_bvn_suite1">
 
   <!-- Feature 1: Modern Image Fallback Initializer (with Official School Logo) -->
   <script>
@@ -336,6 +336,11 @@
 
       <!-- CTA & Mobile Toggle (Primary CTA exclusively on Admissions) -->
       <div class="nav-actions">
+        <button type="button" class="btn btn-naina-voice nav-voice-btn" id="openNainaVoiceModalBtn" aria-label="नैना AI से कॉल पर बात करें">
+          <span class="voice-live-dot"></span>
+          <i class="fa-solid fa-microphone-lines"></i>
+          <span>नैना AI वॉयस कॉल</span>
+        </button>
         <a href="#admission-section" class="btn btn-gold nav-cta-btn" aria-label="ऑनलाइन प्रवेश आवेदन 2027-28">
           <i class="fa-solid fa-pen-nib"></i>
           <span>प्रवेश 2027-28</span>
@@ -404,7 +409,7 @@
           <span class="feature-tag"><i class="fa-solid fa-certificate"></i> CBSE 10+2 मान्यता प्राप्त</span>
         </div>
 
-        <!-- Dual Call-to-Actions (CTAs) -->
+        <!-- Triple Call-to-Actions (CTAs: Admission Form, Naina Voice AI Call, Campus Tour) -->
         <div class="hero-cta-group reveal-fade delay-4">
           <a href="#admission-section" class="btn btn-primary-gold btn-lg pulse-glow" aria-label="ऑनलाइन प्रवेश आवेदन 2027-28">
             <span class="btn-icon"><i class="fa-solid fa-file-circle-check"></i></span>
@@ -414,6 +419,14 @@
             </span>
             <i class="fa-solid fa-arrow-right btn-arrow"></i>
           </a>
+
+          <button type="button" class="btn btn-voice-hero" id="openNainaHeroBtn" aria-label="नैना AI से कॉल पर बात करें">
+            <i class="fa-solid fa-headset"></i>
+            <span class="btn-text-wrap">
+              <span class="btn-main-text">नैना AI से कॉल पर बात करें</span>
+              <span class="btn-sub-text">24/7 शुद्ध हिंदी में वॉयस परामर्श</span>
+            </span>
+          </button>
 
           <button class="btn btn-secondary-glass btn-lg" id="openTourModalBtn" aria-haspopup="dialog" aria-label="वर्चुअल कैंपस टूर वीडियो खोलें">
             <span class="play-pulse-ring">
@@ -1423,8 +1436,8 @@
                     name="phone" 
                     class="form-control" 
                     placeholder="98765 43210 (10 अंक)"
-                    maxlength="11"
-                    pattern="[6-9][0-9]{4}\s?[0-9]{5}"
+                    maxlength="15"
+                    autocomplete="tel"
                     required
                     aria-required="true"
                     aria-describedby="contactMobileError"
@@ -2425,6 +2438,10 @@
       <div class="mob-bar-icon-wrap"><i class="fa-solid fa-phone"></i></div>
       <span class="mob-bar-label">कॉल करें</span>
     </a>
+    <button type="button" class="mob-bar-item mob-bar-voice" id="mobileBottomVoiceBtn" aria-label="नैना AI से कॉल पर बात करें">
+      <div class="mob-bar-icon-wrap mob-bar-highlight" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff;"><i class="fa-solid fa-headset"></i></div>
+      <span class="mob-bar-label" style="color: #059669; font-weight: 700;">नैना AI</span>
+    </button>
     <a href="https://wa.me/919876543210?text=नमस्ते%20भावेश%20विद्या%20निकेतन,%20मुझे%20सत्र%202027-28%20प्रवेश%20की%20जानकारी%20चाहिए।" target="_blank" rel="noopener noreferrer" class="mob-bar-item mob-bar-wa" aria-label="व्हाट्सएप पर सहायता">
       <div class="mob-bar-icon-wrap"><i class="fa-brands fa-whatsapp"></i></div>
       <span class="mob-bar-label">WhatsApp</span>
@@ -2437,13 +2454,101 @@
       <div class="mob-bar-icon-wrap"><i class="fa-solid fa-bullhorn"></i></div>
       <span class="mob-bar-label">सूचनाएं</span>
     </button>
-    <button type="button" class="mob-bar-item" id="mobileBottomMenuBtn" aria-label="मुख्य नेविगेशन मेनू खोलें">
-      <div class="mob-bar-icon-wrap"><i class="fa-solid fa-bars"></i></div>
-      <span class="mob-bar-label">मेनू</span>
-    </button>
   </nav>
 
+  <!-- 24/7 AI Voice Admissions Receptionist Modal ("नैना" Voice AI) -->
+  <div class="naina-voice-modal-backdrop" id="nainaVoiceModalBackdrop" role="dialog" aria-modal="true" aria-label="नैना AI एडमिशन रिसेप्शनिस्ट वॉयस कॉल">
+    <div class="naina-voice-modal-card">
+      <div class="naina-call-header">
+        <div class="naina-call-status">
+          <span class="live-dot"></span>
+          <span class="status-text" id="nainaCallStatusText">24/7 लाइव वॉयस असिस्टेंट</span>
+        </div>
+        <button type="button" class="naina-modal-close" id="closeNainaVoiceModalBtn" aria-label="कॉल समाप्त करें">
+          <i class="fa-solid fa-phone-slash"></i>
+        </button>
+      </div>
+
+      <div class="naina-avatar-stage" id="nainaAvatarStage">
+        <div class="naina-pulse-ring-outer"></div>
+        <div class="naina-pulse-ring-inner"></div>
+        <div class="naina-avatar-orb" id="nainaAvatarOrb">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <div class="naina-soundwave" id="nainaSoundwave">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+
+      <div class="naina-info-wrap">
+        <h3 class="naina-name">नैना (Naina AI)</h3>
+        <p class="naina-designation">आधिकारिक 24/7 AI प्रवेश परामर्शदाता एवं रिसेप्शनिस्ट</p>
+        <p class="naina-institute">भावेश विद्या निकेतन उच्चतर माध्यमिक विद्यालय</p>
+      </div>
+
+      <!-- Live Real-Time Captions / Transcripts -->
+      <div class="naina-transcript-box" id="nainaTranscriptBox">
+        <div class="naina-bubble naina-bot-msg" id="nainaLiveBotMsg">
+          "नमस्ते! 🙏 मैं भावेश विद्या निकेतन की AI काउंसलर नैना हूँ। आप मुझसे फीस, बस सुविधा या डायरेक्टर सर से मीटिंग के बारे में सीधे बोलकर पूछ सकते हैं।"
+        </div>
+        <div class="naina-bubble naina-user-msg" id="nainaLiveUserMsg" style="display:none;"></div>
+      </div>
+
+      <!-- Interactive Control Bar -->
+      <div class="naina-controls-row">
+        <button type="button" class="naina-mic-btn" id="nainaMicBtn" aria-label="बोलने के लिए माइक दबाएं">
+          <i class="fa-solid fa-microphone" id="nainaMicIcon"></i>
+          <span class="mic-label" id="nainaMicLabel">बोलने के लिए दबाएं</span>
+        </button>
+        <button type="button" class="naina-end-btn" id="nainaEndCallBtn" aria-label="कॉल डिस्कनेक्ट करें">
+          <i class="fa-solid fa-phone-slash"></i>
+          <span>कॉल समाप्त</span>
+        </button>
+      </div>
+
+      <div class="naina-call-footer">
+        <span><i class="fa-solid fa-shield-halved"></i> 100% सुरक्षित AI वॉयस कॉल • कोई शुल्क नहीं</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- n8n AI Admissions Counselor Floating Chat Widget -->
+  <link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet" />
+  <script type="module">
+    import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
+
+    createChat({
+      webhookUrl: 'https://bhaveshdewangan.app.n8n.cloud/webhook/0690f739-84cc-4a9d-81fc-8ce4ba7be1e9/chat',
+      webhookConfig: {
+        method: 'POST'
+      },
+      mode: 'window',
+      showWelcomeScreen: true,
+      defaultLanguage: 'hi',
+      initialMessages: [
+        'नमस्ते! 🙏 भावेश विद्या निकेतन में आपका स्वागत है।',
+        'मैं विद्यालय की 24/7 AI प्रवेश काउंसलर हूँ। आप मुझसे सत्र 2027-28 के नए प्रवेश, कक्षावार फीस, बस सुविधा या डायरेक्टर सर (भावेश देवांगन) से मीटिंग के बारे में सीधे पूछ सकते हैं।'
+      ],
+      i18n: {
+        hi: {
+          title: 'भावेश विद्या निकेतन AI काउंसलर 🎓',
+          subtitle: '24/7 प्रवेश एवं स्कूल सहायता',
+          footer: 'भावेश विद्या निकेतन शिक्षण संस्थान',
+          getStarted: 'चैट शुरू करें',
+          inputPlaceholder: 'प्रवेश, फीस या बस के बारे में पूछें...',
+        },
+        en: {
+          title: 'BVN AI Admissions Counselor 🎓',
+          subtitle: '24/7 School Inquiry & Admissions',
+          footer: 'Bhavesh Vidya Niketan',
+          getStarted: 'Start Chat',
+          inputPlaceholder: 'Ask about fees, bus, admissions...',
+        }
+      }
+    });
+  </script>
+
   <!-- JavaScript Application -->
-  <script src="script.js?v=20261106_menu_fix" defer></script>
+  <script src="script.js?v=20261107_bvn_suite1" defer></script>
 </body>
 </html>

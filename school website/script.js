@@ -18,32 +18,56 @@ var supabase = (window.supabase && typeof window.supabase.createClient === 'func
  * Renders title, details, and tag dynamically; gracefully keeps fallback content on error/empty.
  */
 async function loadSchoolNotices() {
+  const noticesContainer = document.getElementById('dynamic-notices');
+  if (!noticesContainer) return;
+
   try {
-    if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    }
-    if (!supabase) {
-      console.warn("Supabase client is not available; keeping fallback notices.");
-      return;
+    // 1. Read notices from local storage first (immediate and offline-ready)
+    let localNotices = [];
+    try {
+      localNotices = JSON.parse(localStorage.getItem('bvn_notices_local') || '[]');
+      if (!Array.isArray(localNotices)) localNotices = [];
+    } catch (e) {
+      localNotices = [];
     }
 
-    const { data, error } = await supabase
-      .from('notices')
-      .select('*')
-      .order('created_at', { ascending: false });
+    // 2. Attempt fetching from Supabase cloud
+    let cloudNotices = [];
+    try {
+      if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('notices')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-    if (error) {
-      console.warn("Supabase Notice Fetch Warning:", error);
-      return; // Keep existing fallback content visible
+        if (!error && Array.isArray(data)) {
+          cloudNotices = data;
+        }
+      }
+    } catch (sbErr) {
+      console.warn("Supabase notice fetch note (using local cache):", sbErr);
     }
+
+    // 3. Merge notices: local entries take priority, avoid duplicates
+    const mergedMap = new Map();
+    localNotices.forEach(n => mergedMap.set(String(n.id || n.title), n));
+    cloudNotices.forEach(n => {
+      const key = String(n.id || n.title);
+      if (!mergedMap.has(key)) {
+        mergedMap.set(key, n);
+      }
+    });
+
+    const data = Array.from(mergedMap.values());
+    data.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
     if (!data || data.length === 0) {
-      console.info("No notices found in Supabase database; keeping fallback content.");
+      console.info("No notices found; keeping fallback notices visible.");
       return; // Keep existing fallback content visible
     }
-
-    const noticesContainer = document.getElementById('dynamic-notices');
-    if (!noticesContainer) return;
 
     // Loop through the data and dynamically render cards showing: title, details, and tag
     noticesContainer.innerHTML = data.map((item, index) => {
@@ -182,32 +206,56 @@ function matchGalleryCategory(itemCat, filterCat) {
  * Renders thumbnail, title, and category badge; gracefully keeps fallback content if empty/offline.
  */
 async function loadSchoolGallery() {
+  const galleryGrid = document.getElementById('galleryGrid');
+  if (!galleryGrid) return;
+
   try {
-    if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    }
-    if (!supabase) {
-      console.warn("Supabase client is not available; keeping fallback static gallery.");
-      return;
+    // 1. Read local photos from localStorage first
+    let localPhotos = [];
+    try {
+      localPhotos = JSON.parse(localStorage.getItem('bvn_gallery_local') || '[]');
+      if (!Array.isArray(localPhotos)) localPhotos = [];
+    } catch (e) {
+      localPhotos = [];
     }
 
-    const { data: photos, error } = await supabase
-      .from('gallery')
-      .select('*')
-      .order('created_at', { ascending: false });
+    // 2. Attempt fetching from Supabase cloud
+    let cloudPhotos = [];
+    try {
+      if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('gallery')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-    if (error) {
-      console.warn("Supabase Gallery Fetch Warning:", error);
-      return; // Keep existing fallback content visible
+        if (!error && Array.isArray(data)) {
+          cloudPhotos = data;
+        }
+      }
+    } catch (sbErr) {
+      console.warn("Supabase gallery fetch note (using local cache):", sbErr);
     }
+
+    // 3. Merge: Local photos take priority, avoid duplicates
+    const mergedMap = new Map();
+    localPhotos.forEach(p => mergedMap.set(String(p.id || p.title), p));
+    cloudPhotos.forEach(p => {
+      const key = String(p.id || p.title);
+      if (!mergedMap.has(key)) {
+        mergedMap.set(key, p);
+      }
+    });
+
+    const photos = Array.from(mergedMap.values());
+    photos.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
     if (!photos || photos.length === 0) {
-      console.info("No photos found in Supabase 'gallery' table; keeping fallback content.");
+      console.info("No custom gallery photos found; keeping fallback static gallery.");
       return; // Keep existing fallback content visible
     }
-
-    const galleryGrid = document.getElementById('galleryGrid');
-    if (!galleryGrid) return;
 
     // Dynamically render cards showing: image_url, title, category badge, data-category attribute
     galleryGrid.innerHTML = photos.map((photo) => {
@@ -690,40 +738,30 @@ document.addEventListener('DOMContentLoaded', () => {
       const targetElement = document.querySelector(href);
       if (targetElement) {
         e.preventDefault();
+        e.stopPropagation();
 
-        // 1. Calculate precise scroll position BEFORE closing drawer
-        const siteHeaderEl = document.getElementById('siteHeader');
-        const headerHeight = siteHeaderEl ? siteHeaderEl.offsetHeight : 70;
-        const elementPosition = targetElement.getBoundingClientRect().top;
-        const targetScrollTop = Math.max(0, elementPosition + window.pageYOffset - (headerHeight + 10));
-
-        // 2. Unlock body scroll immediately so browser can scroll smoothly
-        document.body.style.overflow = '';
-        document.body.classList.remove('drawer-open', 'no-scroll');
-
-        // 3. Close the drawer
+        // 1. Immediately close the drawer and restore body overflow
         closeDrawer();
 
-        // 4. Scroll smoothly to target section
-        window.scrollTo({
-          top: targetScrollTop,
-          behavior: 'smooth'
-        });
-
-        // 5. Secondary check after drawer slide transition (360ms) to ensure exact alignment
+        // 2. Allow brief delay (120ms) for drawer slide-out & body reflow, then perform smooth scroll
         setTimeout(() => {
-          const freshHeader = document.getElementById('siteHeader');
-          const freshHeight = freshHeader ? freshHeader.offsetHeight : 70;
-          const freshPos = targetElement.getBoundingClientRect().top;
-          if (Math.abs(freshPos - (freshHeight + 10)) > 15) {
-            window.scrollTo({
-              top: Math.max(0, freshPos + window.pageYOffset - (freshHeight + 10)),
+          targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 120);
+
+        // 3. Fallback check for mobile fixed header clearance
+        setTimeout(() => {
+          const siteHeaderEl = document.getElementById('siteHeader');
+          const headerHeight = siteHeaderEl ? siteHeaderEl.offsetHeight : 70;
+          const rect = targetElement.getBoundingClientRect();
+          if (rect.top < 0 || rect.top > headerHeight + 35) {
+            window.scrollBy({
+              top: rect.top - (headerHeight + 12),
               behavior: 'smooth'
             });
           }
-        }, 360);
+        }, 380);
 
-        // 6. Update active state in nav
+        // 4. Update active state in nav
         document.querySelectorAll('.desktop-nav .nav-item, .mobile-nav-item').forEach((navLink) => {
           if (navLink.getAttribute('href') === href) {
             navLink.classList.add('active');
@@ -1276,17 +1314,19 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
 
       let hasErrors = false;
+      const errorList = [];
 
-      // 1. Validate Full Name (name) - required
+      // 1. Validate Full Name (name) - required (min 2 chars)
       const name = fullNameInput ? fullNameInput.value.trim() : '';
-      if (!name || name.length < 3) {
+      if (!name || name.length < 2) {
         setFieldError(fullNameInput, 'fullNameError', true);
         hasErrors = true;
+        errorList.push('पूरा नाम (Full Name)');
       } else {
         setFieldError(fullNameInput, 'fullNameError', false);
       }
 
-      // 2. Validate Mobile Number (phone) - required
+      // 2. Validate Mobile Number (phone) - required (10 digits Indian)
       let rawDigits = (contactMobileInput ? contactMobileInput.value : '').replace(/\D/g, '');
       if (rawDigits.length === 12 && rawDigits.startsWith('91')) {
         rawDigits = rawDigits.slice(2);
@@ -1297,6 +1337,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!isValidIndianMobile(rawDigits)) {
         setFieldError(contactMobileInput, 'contactMobileError', true);
         hasErrors = true;
+        errorList.push('10 अंकों का मान्य मोबाइल नंबर (Mobile Number)');
       } else {
         setFieldError(contactMobileInput, 'contactMobileError', false);
       }
@@ -1307,6 +1348,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!class_grade) {
         setFieldError(targetClassSelect, 'targetClassError', true);
         hasErrors = true;
+        errorList.push('प्रवेश हेतु कक्षा (Select Class)');
       } else {
         setFieldError(targetClassSelect, 'targetClassError', false);
       }
@@ -1315,6 +1357,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const message = parentQueryInput ? parentQueryInput.value.trim() : '';
 
       if (hasErrors) {
+        if (formErrorBanner) {
+          if (formErrorBannerText) {
+            formErrorBannerText.textContent = `कृपया निम्नलिखित विवरण सही भरें: ${errorList.join(', ')}`;
+          }
+          formErrorBanner.style.display = 'block';
+          formErrorBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
         const firstError = admissionForm.querySelector('.has-error input, .has-error select');
         if (firstError) {
           firstError.focus();
@@ -1382,6 +1431,24 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('Supabase client check note:', e);
       }
 
+      // Synchronize admission enquiry to n8n Automation Engine (Google Sheets + Telegram)
+      const n8nWebhookUrl = 'https://bhaveshdewangan.app.n8n.cloud/webhook/0690f739-84cc-4a9d-81fc-8ce4ba7be1e9/chat';
+      try {
+        fetch(n8nWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'sendMessage',
+            sessionId: 'form_' + Date.now(),
+            chatInput: `📝 [नया प्रवेश फॉर्म आवेदन] छात्र: ${name} | मोबाइल: ${phone} | कक्षा: ${class_grade} | संदेश: ${message || 'कोई अतिरिक्त संदेश नहीं'}`
+          })
+        }).catch((n8nErr) => {
+          console.warn('n8n sync notification note:', n8nErr);
+        });
+      } catch (e) {
+        console.warn('n8n dispatch error:', e);
+      }
+
       // Brief simulated delay for clean UX feedback
       setTimeout(() => {
         // Reset the form
@@ -1404,8 +1471,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (formSuccessState) {
+          formSuccessState.style.display = 'block';
           formSuccessState.classList.add('is-visible');
-          formSuccessState.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => {
+            formSuccessState.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 50);
         }
 
         // Restore button state
@@ -1419,7 +1489,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (formBtnText) {
           formBtnText.innerHTML = '<i class="fa-solid fa-paper-plane"></i> पूछताछ भेजें (Submit Enquiry)';
         }
-      }, 600);
+      }, 500);
     });
   }
 
@@ -1444,6 +1514,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formErrorBanner.style.display = 'none';
       }
       formSuccessState.classList.remove('is-visible');
+      formSuccessState.style.display = 'none';
       admissionForm.style.display = 'block';
       if (fullNameInput) {
         fullNameInput.focus();
@@ -1748,6 +1819,244 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     deferredPrompt = null;
   });
+
+  /* --------------------------------------------------------------------------
+     14. 24/7 AI Voice Admissions Receptionist Engine ("नैना" Voice AI)
+     -------------------------------------------------------------------------- */
+  const initNainaVoiceAssistant = () => {
+    const backdrop = document.getElementById('nainaVoiceModalBackdrop');
+    const openNavBtn = document.getElementById('openNainaVoiceModalBtn');
+    const openHeroBtn = document.getElementById('openNainaHeroBtn');
+    const openMobBtn = document.getElementById('mobileBottomVoiceBtn');
+    const closeBtn = document.getElementById('closeNainaVoiceModalBtn');
+    const endCallBtn = document.getElementById('nainaEndCallBtn');
+    const micBtn = document.getElementById('nainaMicBtn');
+    const micIcon = document.getElementById('nainaMicIcon');
+    const micLabel = document.getElementById('nainaMicLabel');
+    const statusText = document.getElementById('nainaCallStatusText');
+    const avatarStage = document.getElementById('nainaAvatarStage');
+    const botMsg = document.getElementById('nainaLiveBotMsg');
+    const userMsg = document.getElementById('nainaLiveUserMsg');
+    const transcriptBox = document.getElementById('nainaTranscriptBox');
+
+    if (!backdrop) return;
+
+    let voiceSessionId = 'voice_' + Date.now();
+    let isListening = false;
+    let isSpeaking = false;
+    const n8nWebhook = 'https://bhaveshdewangan.app.n8n.cloud/webhook/0690f739-84cc-4a9d-81fc-8ce4ba7be1e9/chat';
+
+    // Speech Recognition setup (Speech-to-Text)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'hi-IN';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+    }
+
+    // Speech Synthesis setup (Text-to-Speech)
+    const speakHindi = (text, onEndCallback) => {
+      if (!('speechSynthesis' in window)) {
+        if (onEndCallback) onEndCallback();
+        return;
+      }
+
+      window.speechSynthesis.cancel(); // Stop any pending speech
+
+      // Clean markdown tags & symbols for natural speech
+      const cleanText = text
+        .replace(/^[=\s-]+/, '')
+        .replace(/\*\*/g, '')
+        .replace(/\*/g, '')
+        .replace(/#/g, '')
+        .replace(/•/g, '')
+        .replace(/₹/g, 'रुपए ')
+        .trim();
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'hi-IN';
+      utterance.rate = 0.96; // Courteous, natural Indian pace
+      utterance.pitch = 1.05; // Friendly feminine pitch
+
+      // Pick best Indian Hindi voice if available
+      const voices = window.speechSynthesis.getVoices();
+      const hindiVoice = voices.find(v => v.lang.includes('hi') || v.name.toLowerCase().includes('hindi') || v.name.toLowerCase().includes('kalpana') || v.name.toLowerCase().includes('lekha'));
+      if (hindiVoice) {
+        utterance.voice = hindiVoice;
+      }
+
+      utterance.onstart = () => {
+        isSpeaking = true;
+        if (avatarStage) avatarStage.classList.add('is-speaking');
+        if (statusText) statusText.textContent = 'नैना बोल रही हैं...';
+      };
+
+      utterance.onend = () => {
+        isSpeaking = false;
+        if (avatarStage) avatarStage.classList.remove('is-speaking');
+        if (statusText) statusText.textContent = 'कॉल सक्रिय • आपकी बारी, बोलें';
+        if (onEndCallback) onEndCallback();
+      };
+
+      utterance.onerror = () => {
+        isSpeaking = false;
+        if (avatarStage) avatarStage.classList.remove('is-speaking');
+        if (statusText) statusText.textContent = 'कॉल सक्रिय • आपकी बारी, बोलें';
+        if (onEndCallback) onEndCallback();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    // Open Call Modal
+    const startCall = () => {
+      backdrop.classList.add('is-active');
+      document.body.style.overflow = 'hidden';
+      voiceSessionId = 'voice_' + Date.now();
+      if (statusText) statusText.textContent = 'कॉल कनेक्टेड (24/7 AI)';
+      if (userMsg) userMsg.style.display = 'none';
+
+      // Initial Greeting
+      const greeting = 'नमस्ते! भावेश विद्या निकेतन में आपका स्वागत है। मैं विद्यालय की 24/7 AI काउंसलर नैना हूँ। आप मुझसे फीस, बस सुविधा या डायरेक्टर सर से मीटिंग के बारे में सीधे पूछ सकते हैं।';
+      if (botMsg) botMsg.textContent = `"${greeting}"`;
+      speakHindi(greeting, () => {
+        // Automatically start listening after greeting
+        startListening();
+      });
+    };
+
+    // Close Call Modal
+    const endCall = () => {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (recognition && isListening) recognition.stop();
+      isListening = false;
+      isSpeaking = false;
+      backdrop.classList.remove('is-active');
+      document.body.style.overflow = '';
+      if (micBtn) micBtn.classList.remove('is-listening');
+      if (avatarStage) avatarStage.classList.remove('is-speaking');
+    };
+
+    // Start Microphone Listening
+    const startListening = () => {
+      if (isSpeaking) {
+        window.speechSynthesis.cancel();
+        if (avatarStage) avatarStage.classList.remove('is-speaking');
+      }
+
+      if (!recognition) {
+        alert('आपके ब्राउज़र में स्पीच रिकग्निशन समर्थित नहीं है। कृपया गूगल क्रोम या एज ब्राउज़र का उपयोग करें, या नीचे दिए गए टेक्स्ट चैट विजेट का उपयोग करें।');
+        return;
+      }
+
+      try {
+        isListening = true;
+        if (micBtn) micBtn.classList.add('is-listening');
+        if (micLabel) micLabel.textContent = 'सुन रही हूँ... बोलिए';
+        if (statusText) statusText.textContent = 'सुन रही हूँ... कृपया बोलें';
+        recognition.start();
+      } catch (err) {
+        console.warn('Recognition start state notice:', err);
+      }
+    };
+
+    // Recognition event handlers
+    if (recognition) {
+      recognition.onresult = async (event) => {
+        isListening = false;
+        if (micBtn) micBtn.classList.remove('is-listening');
+        if (micLabel) micLabel.textContent = 'बोलने के लिए दबाएं';
+
+        const transcript = event.results[0][0].transcript.trim();
+        if (!transcript) return;
+
+        // Display user question
+        if (userMsg) {
+          userMsg.style.display = 'block';
+          userMsg.textContent = `👤 आप: "${transcript}"`;
+          if (transcriptBox) transcriptBox.scrollTop = transcriptBox.scrollHeight;
+        }
+
+        if (statusText) statusText.textContent = 'नैना सोच रही हैं...';
+        if (botMsg) botMsg.textContent = '...उत्तर तैयार किया जा रहा है...';
+
+        // Dispatch question to n8n AI counselor webhook
+        try {
+          const response = await fetch(n8nWebhook, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'sendMessage',
+              sessionId: voiceSessionId,
+              chatInput: `[वॉयस कॉल] ${transcript}`
+            })
+          });
+
+          const data = await response.json();
+          let replyText = (data && data.output) ? data.output : 'नमस्ते, मुझे आपका सवाल प्राप्त हुआ है। क्या आप कोई अन्य जानकारी चाहते हैं?';
+          replyText = replyText.replace(/^[=\s-]+/, '').trim();
+
+          if (botMsg) {
+            botMsg.textContent = replyText;
+            if (transcriptBox) transcriptBox.scrollTop = transcriptBox.scrollHeight;
+          }
+
+          // Speak response
+          speakHindi(replyText);
+        } catch (fetchErr) {
+          console.error('n8n voice webhook dispatch error:', fetchErr);
+          const fallback = 'क्षमा करें, नेटवर्क में हल्की देरी है। आप सीधे हमारे हेल्पलाइन नंबर +91 98765 43210 पर भी संपर्क कर सकते हैं।';
+          if (botMsg) botMsg.textContent = fallback;
+          speakHindi(fallback);
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.warn('Speech recognition notice:', event.error);
+        isListening = false;
+        if (micBtn) micBtn.classList.remove('is-listening');
+        if (micLabel) micLabel.textContent = 'बोलने के लिए दबाएं';
+        if (statusText) statusText.textContent = 'कॉल सक्रिय • बोलने के लिए माइक दबाएं';
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        if (micBtn) micBtn.classList.remove('is-listening');
+        if (micLabel) micLabel.textContent = 'बोलने के लिए दबाएं';
+      };
+    }
+
+    // Attach Event Listeners
+    if (openNavBtn) openNavBtn.addEventListener('click', startCall);
+    if (openHeroBtn) openHeroBtn.addEventListener('click', startCall);
+    if (openMobBtn) openMobBtn.addEventListener('click', startCall);
+    if (closeBtn) closeBtn.addEventListener('click', endCall);
+    if (endCallBtn) endCallBtn.addEventListener('click', endCall);
+
+    if (micBtn) {
+      micBtn.addEventListener('click', () => {
+        if (isListening) {
+          if (recognition) recognition.stop();
+          isListening = false;
+          micBtn.classList.remove('is-listening');
+          if (micLabel) micLabel.textContent = 'बोलने के लिए दबाएं';
+        } else {
+          startListening();
+        }
+      });
+    }
+
+    // Close on backdrop outside click
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) {
+        endCall();
+      }
+    });
+  };
+
+  initNainaVoiceAssistant();
 
   // Log confirmation
   console.log('%c🏫 भावेश विद्या निकेतन (Bhavesh Vidya Niketan) %c| सत्र 2027-28 वेब पोर्टल सक्रिय', 
