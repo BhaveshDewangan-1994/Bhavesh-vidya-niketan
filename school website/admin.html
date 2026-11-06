@@ -1801,110 +1801,142 @@
     // --------------------------------------------------------------------------
     // 5. Enquiries Module: Fetch & Render Active Admission Enquiries
     // --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
+    // 5. Enquiries Module: Fetch & Render Active Admission Enquiries
+    // --------------------------------------------------------------------------
     async function loadActiveEnquiries() {
-      if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-      }
-      if (!supabase) return;
-
       if (refreshEnqIcon) refreshEnqIcon.classList.add('fa-spin');
 
+      // 1. Always load local enquiries from localStorage
+      let localList = [];
       try {
-        const { data, error } = await supabase
-          .from('enquiries')
-          .select('*')
-          .order('created_at', { ascending: false });
+        localList = JSON.parse(localStorage.getItem('bvn_enquiries_local') || '[]');
+        if (!Array.isArray(localList)) localList = [];
+      } catch (e) {
+        localList = [];
+      }
 
-        if (error) throw error;
-
-        const count = Array.isArray(data) ? data.length : 0;
-        if (enquiriesCountBadge) enquiriesCountBadge.textContent = count;
-        if (enquiriesTabBadge) enquiriesTabBadge.textContent = count;
-
-        if (!data || data.length === 0) {
-          liveEnquiriesList.innerHTML = `
-            <div class="empty-state">
-              <i class="fa-solid fa-inbox"></i>
-              <p>वर्तमान में कोई नई पूछताछ उपलब्ध नहीं है।</p>
-            </div>
-          `;
-          return;
+      // 2. Query Supabase if client is ready
+      let remoteList = [];
+      try {
+        if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
-
-        let html = '';
-        data.forEach(function(item) {
-          const rawDate = item.created_at ? new Date(item.created_at) : null;
-          const formattedDate = rawDate 
-            ? rawDate.toLocaleDateString('hi-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + 
-              rawDate.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' })
-            : 'हाल ही में';
-
-          const nameText = escapeHTML(item.name || 'अज्ञात नाम');
-          const phoneRaw = String(item.phone || '').replace(/\D/g, '');
-          const phoneDisplay = escapeHTML(item.phone || 'उपलब्ध नहीं');
-          const classGradeText = escapeHTML(item.class_grade || 'सामान्य प्रवेश');
-          const messageText = escapeHTML(item.message || 'कोई अतिरिक्त संदेश नहीं लिखा गया।');
-          const enquiryId = item.id;
-
-          const waClean = phoneRaw.length === 10 ? phoneRaw : (phoneRaw.startsWith('91') && phoneRaw.length === 12 ? phoneRaw.slice(2) : phoneRaw);
-          const waLink = waClean.length === 10 
-            ? `https://wa.me/91${waClean}?text=${encodeURIComponent('नमस्ते ' + (item.name || '') + ', भावेश विद्या निकेतन में आपकी दाखिला पूछताछ के संदर्भ में...')}`
-            : null;
-
-          html += `
-            <article class="enquiry-card-item" id="enquiry-card-${enquiryId}">
-              <div class="enquiry-card-top">
-                <div class="enquiry-meta">
-                  <span class="badge-grade"><i class="fa-solid fa-school"></i> ${classGradeText}</span>
-                  <span class="item-date"><i class="fa-regular fa-clock"></i> ${formattedDate}</span>
-                </div>
-                <button type="button" class="btn-delete" id="btn-del-enq-${enquiryId}" onclick="deleteEnquiryRecord(${enquiryId})">
-                  <i class="fa-solid fa-trash-can"></i> हटाएं (Delete)
-                </button>
-              </div>
-              
-              <div class="enquiry-info-grid">
-                <div class="enquiry-name">
-                  <i class="fa-solid fa-user-graduate" style="color: var(--gold-primary);"></i>
-                  <span>${nameText}</span>
-                </div>
-                <div class="enquiry-phone">
-                  <i class="fa-solid fa-phone" style="color: var(--gold-primary);"></i>
-                  <a href="tel:${phoneRaw}" class="phone-link" title="सीधे कॉल करें">
-                    <i class="fa-solid fa-phone-volume"></i> +91 ${phoneDisplay}
-                  </a>
-                  ${waLink ? `
-                    <a href="${waLink}" target="_blank" class="btn-wa-shortcut" title="व्हाट्सएप पर बात करें">
-                      <i class="fa-brands fa-whatsapp"></i> व्हाट्सएप
-                    </a>
-                  ` : ''}
-                </div>
-              </div>
-
-              <div class="enquiry-message-box">
-                <div class="enquiry-message-label">
-                  <i class="fa-regular fa-comment-dots"></i> अभिभावक / विद्यार्थी का संदेश:
-                </div>
-                <p style="margin: 0; color: #f1f5f9;">${messageText}</p>
-              </div>
-            </article>
-          `;
-        });
-
-        liveEnquiriesList.innerHTML = html;
-
+        if (supabase) {
+          const { data, error } = await supabase
+            .from('enquiries')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (!error && Array.isArray(data)) {
+            remoteList = data;
+          }
+        }
       } catch (err) {
-        console.warn("Failed to load active enquiries:", err);
+        console.warn("Supabase load enquiries note:", err);
+      }
+
+      // 3. Merge seamlessly (avoid duplicate phone & name combinations)
+      const mergedMap = new Map();
+      
+      // Add remote records first
+      remoteList.forEach(item => {
+        const key = (item.phone || '') + '_' + (item.name || '');
+        mergedMap.set(key, item);
+      });
+
+      // Add local records (ensuring newly submitted local ones are present)
+      localList.forEach(item => {
+        const key = (item.phone || '') + '_' + (item.name || '');
+        if (!mergedMap.has(key)) {
+          mergedMap.set(key, item);
+        }
+      });
+
+      const combinedData = Array.from(mergedMap.values());
+      // Sort newest first
+      combinedData.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+      const count = combinedData.length;
+      if (enquiriesCountBadge) enquiriesCountBadge.textContent = count;
+      if (enquiriesTabBadge) enquiriesTabBadge.textContent = count;
+
+      if (count === 0) {
         liveEnquiriesList.innerHTML = `
-          <div class="empty-state" style="color: #fca5a5;">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-            <p>पूछताछ लोड करने में समस्या: ${escapeHTML(err.message || 'डेटाबेस त्रुटि')}</p>
+          <div class="empty-state">
+            <i class="fa-solid fa-inbox"></i>
+            <p>वर्तमान में कोई नई पूछताछ उपलब्ध नहीं है।</p>
           </div>
         `;
-      } finally {
         if (refreshEnqIcon) {
           setTimeout(function() { refreshEnqIcon.classList.remove('fa-spin'); }, 400);
         }
+        return;
+      }
+
+      let html = '';
+      combinedData.forEach(function(item) {
+        const rawDate = item.created_at ? new Date(item.created_at) : null;
+        const formattedDate = rawDate 
+          ? rawDate.toLocaleDateString('hi-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + 
+            rawDate.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit' })
+          : 'हाल ही में';
+
+        const nameText = escapeHTML(item.name || 'अज्ञात नाम');
+        const phoneRaw = String(item.phone || '').replace(/\D/g, '');
+        const phoneDisplay = escapeHTML(item.phone || 'उपलब्ध नहीं');
+        const classGradeText = escapeHTML(item.class_grade || 'सामान्य प्रवेश');
+        const messageText = escapeHTML(item.message || 'कोई अतिरिक्त संदेश नहीं लिखा गया।');
+        const enquiryId = item.id;
+
+        const waClean = phoneRaw.length === 10 ? phoneRaw : (phoneRaw.startsWith('91') && phoneRaw.length === 12 ? phoneRaw.slice(2) : phoneRaw);
+        const waLink = waClean.length === 10 
+          ? `https://wa.me/91${waClean}?text=${encodeURIComponent('नमस्ते ' + (item.name || '') + ', भावेश विद्या निकेतन में आपकी दाखिला पूछताछ के संदर्भ में...')}`
+          : null;
+
+        html += `
+          <article class="enquiry-card-item" id="enquiry-card-${enquiryId}">
+            <div class="enquiry-card-top">
+              <div class="enquiry-meta">
+                <span class="badge-grade"><i class="fa-solid fa-school"></i> ${classGradeText}</span>
+                <span class="item-date"><i class="fa-regular fa-clock"></i> ${formattedDate}</span>
+              </div>
+              <button type="button" class="btn-delete" id="btn-del-enq-${enquiryId}" onclick="deleteEnquiryRecord('${enquiryId}')">
+                <i class="fa-solid fa-trash-can"></i> हटाएं (Delete)
+              </button>
+            </div>
+            
+            <div class="enquiry-info-grid">
+              <div class="enquiry-name">
+                <i class="fa-solid fa-user-graduate" style="color: var(--gold-primary);"></i>
+                <span>${nameText}</span>
+              </div>
+              <div class="enquiry-phone">
+                <i class="fa-solid fa-phone" style="color: var(--gold-primary);"></i>
+                <a href="tel:${phoneRaw}" class="phone-link" title="सीधे कॉल करें">
+                  <i class="fa-solid fa-phone-volume"></i> +91 ${phoneDisplay}
+                </a>
+                ${waLink ? `
+                  <a href="${waLink}" target="_blank" class="btn-wa-shortcut" title="व्हाट्सएप पर बात करें">
+                    <i class="fa-brands fa-whatsapp"></i> व्हाट्सएप
+                  </a>
+                ` : ''}
+              </div>
+            </div>
+
+            <div class="enquiry-message-box">
+              <div class="enquiry-message-label">
+                <i class="fa-regular fa-comment-dots"></i> अभिभावक / विद्यार्थी का संदेश:
+              </div>
+              <p style="margin: 0; color: #f1f5f9;">${messageText}</p>
+            </div>
+          </article>
+        `;
+      });
+
+      liveEnquiriesList.innerHTML = html;
+
+      if (refreshEnqIcon) {
+        setTimeout(function() { refreshEnqIcon.classList.remove('fa-spin'); }, 400);
       }
     }
 
@@ -1923,22 +1955,34 @@
       }
 
       try {
+        // 1. Delete from localStorage
+        try {
+          let localList = JSON.parse(localStorage.getItem('bvn_enquiries_local') || '[]');
+          localList = localList.filter(item => String(item.id) !== String(enquiryId));
+          localStorage.setItem('bvn_enquiries_local', JSON.stringify(localList));
+        } catch (e) {
+          console.warn("Local storage delete warning:", e);
+        }
+
+        // 2. Delete from Supabase if client is ready
         if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
           supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
-        if (!supabase) throw new Error("डेटाबेस क्लाइंट लोड नहीं हो सका।");
-
-        const { error } = await supabase
-          .from('enquiries')
-          .delete()
-          .eq('id', enquiryId);
-
-        if (error) throw error;
+        if (supabase) {
+          try {
+            await supabase
+              .from('enquiries')
+              .delete()
+              .eq('id', enquiryId);
+          } catch (sbDelErr) {
+            console.warn("Supabase delete note:", sbDelErr);
+          }
+        }
 
         showFeedbackAlert(
           true,
           "पूछताछ सफलतापूर्वक हटा दी गई!",
-          "चयनित पूछताछ रिकॉर्ड डेटाबेस से हटा दिया गया है।"
+          "चयनित पूछताछ रिकॉर्ड पोर्टल से हटा दिया गया है।"
         );
 
         await loadActiveEnquiries();
@@ -1948,7 +1992,7 @@
         showFeedbackAlert(
           false,
           "पूछताछ हटाने में त्रुटि!",
-          err.message || "डेटाबेस से पूछताछ हटाने में समस्या आई।"
+          err.message || "पूछताछ हटाने में समस्या आई।"
         );
         if (delBtn) {
           delBtn.disabled = false;

@@ -3823,20 +3823,23 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
   position: fixed;
   top: 0;
   right: -320px;
-  width: 300px;
-  max-width: 85vw;
+  width: 310px;
+  max-width: 86vw;
   height: 100vh;
   height: 100dvh;
-  background-color: #08182b;
-  color: #ffffff;
+  background-color: #08182b !important;
+  color: #ffffff !important;
   z-index: 1000000;
   box-shadow: -10px 0 35px rgba(0, 0, 0, 0.75);
   display: flex;
   flex-direction: column;
   transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  border-left: 1px solid rgba(212, 175, 55, 0.25);
+  border-left: 1px solid rgba(212, 175, 55, 0.3);
   overflow: hidden;
   pointer-events: auto !important;
+  opacity: 1 !important;
+  filter: none !important;
+  -webkit-filter: none !important;
 }
 
 @media (min-width: 993px) {
@@ -3854,8 +3857,9 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: #08182b;
 }
 
 .mobile-drawer-brand {
@@ -3897,42 +3901,62 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
 
 .mobile-drawer-close {
   color: #cbd5e1;
-  font-size: 1.3rem;
-  padding: 6px;
+  font-size: 1.35rem;
+  padding: 8px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.mobile-drawer-close:hover,
+.mobile-drawer-close:active {
+  color: #FEF08A;
 }
 
 .mobile-nav-links {
   list-style: none;
-  padding: 16px 20px;
+  padding: 12px 18px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   flex-grow: 1;
+  background: #08182b;
 }
 
 .mobile-nav-item {
-  display: block;
-  padding: 13px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 6px;
   font-size: 1.02rem;
-  color: #e2e8f0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  color: #f8fafc !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   font-weight: 500;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: rgba(212, 175, 55, 0.25);
-  transition: color var(--transition-fast), padding-left var(--transition-fast);
+  transition: color var(--transition-fast), padding-left var(--transition-fast), background var(--transition-fast);
+  border-radius: 6px;
+}
+
+.mobile-nav-item i {
+  color: #D4AF37;
+  width: 20px;
+  text-align: center;
+  font-size: 0.95rem;
+  flex-shrink: 0;
 }
 
 .mobile-nav-item:hover,
 .mobile-nav-item:active {
-  color: var(--color-gold-bright);
-  padding-left: 8px;
+  color: var(--color-gold-bright) !important;
+  padding-left: 10px;
+  background: rgba(212, 175, 55, 0.1);
 }
 
 .mobile-drawer-footer {
-  padding: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(4, 13, 24, 0.6);
+  padding: 18px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: #051221;
 }
 
 .drawer-contact-info {

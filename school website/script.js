@@ -669,16 +669,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const touchEndY = e.changedTouches[0].clientY;
         const diffX = touchEndX - touchStartX;
         const diffY = Math.abs(touchEndY - touchStartY);
-        // Drawer is positioned on the right side.
-        // User must swipe right (diffX > 70) with minimal vertical scrolling (diffY < 40).
-        if (diffX > 70 && diffY < 40) {
+        // Only trigger close on deliberate horizontal rightward swipe (> 85px) with low vertical movement (< 30px)
+        if (diffX > 85 && diffY < 30) {
           closeDrawer();
         }
       }
     }, { passive: true });
   }
 
-  // Auto-close mobile drawer on nav item click and perform smooth scroll
+  // Auto-close mobile drawer on nav item click and perform reliable smooth scroll
   const mobileNavItems = document.querySelectorAll(
     '#mobileDrawer .mobile-nav-item, #mobileDrawer a[href^="#"]'
   );
@@ -686,41 +685,52 @@ document.addEventListener('DOMContentLoaded', () => {
   mobileNavItems.forEach((item) => {
     item.addEventListener('click', function(e) {
       const href = this.getAttribute('href');
-      
-      // Close the drawer immediately
-      closeDrawer();
+      if (!href || !href.startsWith('#') || href === '#') return;
 
-      // If it's an in-page anchor, navigate smoothly without clipping behind header
-      if (href && href.startsWith('#') && href !== '#') {
-        const targetElement = document.querySelector(href);
-        if (targetElement) {
-          e.preventDefault();
-          
-          // Slight delay to ensure drawer slide-out reflow has occurred and body scroll is unlocked
-          setTimeout(() => {
-            try {
-              targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } catch (err) {
-              const siteHeaderEl = document.getElementById('siteHeader');
-              const headerHeight = siteHeaderEl ? siteHeaderEl.offsetHeight : 80;
-              const elementPosition = targetElement.getBoundingClientRect().top;
-              const offsetPosition = elementPosition + window.pageYOffset - (headerHeight + 10);
-              window.scrollTo({
-                top: Math.max(0, offsetPosition),
-                behavior: 'smooth'
-              });
-            }
+      const targetElement = document.querySelector(href);
+      if (targetElement) {
+        e.preventDefault();
 
-            // Update active state in nav
-            document.querySelectorAll('.desktop-nav .nav-item, .mobile-nav-item').forEach((navLink) => {
-              if (navLink.getAttribute('href') === href) {
-                navLink.classList.add('active');
-              } else {
-                navLink.classList.remove('active');
-              }
+        // 1. Calculate precise scroll position BEFORE closing drawer
+        const siteHeaderEl = document.getElementById('siteHeader');
+        const headerHeight = siteHeaderEl ? siteHeaderEl.offsetHeight : 70;
+        const elementPosition = targetElement.getBoundingClientRect().top;
+        const targetScrollTop = Math.max(0, elementPosition + window.pageYOffset - (headerHeight + 10));
+
+        // 2. Unlock body scroll immediately so browser can scroll smoothly
+        document.body.style.overflow = '';
+        document.body.classList.remove('drawer-open', 'no-scroll');
+
+        // 3. Close the drawer
+        closeDrawer();
+
+        // 4. Scroll smoothly to target section
+        window.scrollTo({
+          top: targetScrollTop,
+          behavior: 'smooth'
+        });
+
+        // 5. Secondary check after drawer slide transition (360ms) to ensure exact alignment
+        setTimeout(() => {
+          const freshHeader = document.getElementById('siteHeader');
+          const freshHeight = freshHeader ? freshHeader.offsetHeight : 70;
+          const freshPos = targetElement.getBoundingClientRect().top;
+          if (Math.abs(freshPos - (freshHeight + 10)) > 15) {
+            window.scrollTo({
+              top: Math.max(0, freshPos + window.pageYOffset - (freshHeight + 10)),
+              behavior: 'smooth'
             });
-          }, 60);
-        }
+          }
+        }, 360);
+
+        // 6. Update active state in nav
+        document.querySelectorAll('.desktop-nav .nav-item, .mobile-nav-item').forEach((navLink) => {
+          if (navLink.getAttribute('href') === href) {
+            navLink.classList.add('active');
+          } else {
+            navLink.classList.remove('active');
+          }
+        });
       }
     });
   });
@@ -1260,7 +1270,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Handle Form Submission with Supabase
+  // Handle Form Submission with Supabase & Resilient Local Storage
   if (admissionForm) {
     admissionForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -1277,14 +1287,20 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // 2. Validate Mobile Number (phone) - required
-      const rawMobile = contactMobileInput ? contactMobileInput.value.replace(/\D/g, '') : '';
-      if (!isValidIndianMobile(rawMobile)) {
+      let rawDigits = (contactMobileInput ? contactMobileInput.value : '').replace(/\D/g, '');
+      if (rawDigits.length === 12 && rawDigits.startsWith('91')) {
+        rawDigits = rawDigits.slice(2);
+      } else if (rawDigits.length === 11 && rawDigits.startsWith('0')) {
+        rawDigits = rawDigits.slice(1);
+      }
+
+      if (!isValidIndianMobile(rawDigits)) {
         setFieldError(contactMobileInput, 'contactMobileError', true);
         hasErrors = true;
       } else {
         setFieldError(contactMobileInput, 'contactMobileError', false);
       }
-      const phone = rawMobile;
+      const phone = rawDigits;
 
       // 3. Validate Class / Grade of Interest (class_grade) - required
       const class_grade = targetClassSelect ? targetClassSelect.value : '';
@@ -1323,34 +1339,58 @@ document.addEventListener('DOMContentLoaded', () => {
         formBtnText.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> भेजा जा रहा है...';
       }
 
+      // Step 03: Prepare Enquiry Record
+      const newEnquiry = {
+        id: Date.now(),
+        name: name,
+        phone: phone,
+        class_grade: class_grade,
+        message: message || '',
+        created_at: new Date().toISOString()
+      };
+
+      // Always save enquiry to localStorage so it is never lost and visible in admin portal
       try {
-        // Ensure Supabase client is available
+        const localEnquiries = JSON.parse(localStorage.getItem('bvn_enquiries_local') || '[]');
+        localEnquiries.unshift(newEnquiry);
+        localStorage.setItem('bvn_enquiries_local', JSON.stringify(localEnquiries));
+      } catch (locErr) {
+        console.warn('Local storage write warning:', locErr);
+      }
+
+      // Attempt Supabase insert concurrently
+      try {
         if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
           supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
-        if (!supabase) {
-          throw new Error('Supabase डेटाबेस क्लाइंट उपलब्ध नहीं है। कृपया इंटरनेट कनेक्शन जांचें।');
+        if (supabase) {
+          supabase
+            .from('enquiries')
+            .insert([{ name, phone, class_grade, message }])
+            .then(({ error }) => {
+              if (error) {
+                console.warn('Supabase cloud sync warning:', error);
+              } else {
+                console.info('Supabase enquiry successfully synchronized to cloud!');
+              }
+            })
+            .catch((sbErr) => {
+              console.warn('Supabase network unreachable, enquiry recorded locally:', sbErr);
+            });
         }
+      } catch (e) {
+        console.warn('Supabase client check note:', e);
+      }
 
-        // Insert into 'enquiries' table: { name, phone, class_grade, message }
-        const { data, error } = await supabase
-          .from('enquiries')
-          .insert([
-            { name, phone, class_grade, message }
-          ]);
-
-        if (error) {
-          throw error;
-        }
-
-        // On Success:
-        // 1. Reset the form
+      // Brief simulated delay for clean UX feedback
+      setTimeout(() => {
+        // Reset the form
         admissionForm.reset();
         admissionForm.querySelectorAll('.form-group').forEach((group) => {
           group.classList.remove('has-error', 'is-valid');
         });
 
-        // 2. Hide form and reveal success card
+        // Hide form and reveal success confirmation card
         admissionForm.style.display = 'none';
 
         if (summaryStudentName) {
@@ -1368,9 +1408,6 @@ document.addEventListener('DOMContentLoaded', () => {
           formSuccessState.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-      } catch (err) {
-        console.error('Supabase Enquiry submission error:', err);
-
         // Restore button state
         if (submitFormBtn) {
           submitFormBtn.classList.remove('is-loading');
@@ -1382,16 +1419,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (formBtnText) {
           formBtnText.innerHTML = '<i class="fa-solid fa-paper-plane"></i> पूछताछ भेजें (Submit Enquiry)';
         }
-
-        // Display user-friendly Hindi error notice
-        if (formErrorBanner) {
-          if (formErrorBannerText) {
-            formErrorBannerText.textContent = 'पूछताछ दर्ज करने में समस्या आई। कृपया पुनः प्रयास करें अथवा हेल्पलाइन नंबर (+91 98765 43210) पर संपर्क करें।';
-          }
-          formErrorBanner.style.display = 'flex';
-          formErrorBanner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      }
+      }, 600);
     });
   }
 

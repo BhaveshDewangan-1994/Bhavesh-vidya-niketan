@@ -1,5 +1,5 @@
-/* Service Worker for Bhavesh Vidya Niketan Progressive Web App (v2) */
-const CACHE_NAME = 'bvn-cache-v2';
+/* Service Worker for Bhavesh Vidya Niketan Progressive Web App (v3) */
+const CACHE_NAME = 'bvn-cache-v3';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
