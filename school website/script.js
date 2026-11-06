@@ -615,15 +615,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Prevent clicks inside drawer from bubbling to document outside-click listener
+  if (mobileDrawer) {
+    mobileDrawer.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+
   if (drawerBackdrop) {
     drawerBackdrop.addEventListener('click', (e) => {
       e.stopPropagation();
       closeDrawer();
     });
-    drawerBackdrop.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      closeDrawer();
-    }, { passive: false });
   }
 
   // Closes mobile drawer when clicking outside the drawer box
@@ -695,15 +698,18 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // Slight delay to ensure drawer slide-out reflow has occurred and body scroll is unlocked
           setTimeout(() => {
-            const siteHeaderEl = document.getElementById('siteHeader');
-            const headerHeight = siteHeaderEl ? siteHeaderEl.offsetHeight : 80;
-            const elementPosition = targetElement.getBoundingClientRect().top;
-            const offsetPosition = elementPosition + window.pageYOffset - (headerHeight + 12);
-
-            window.scrollTo({
-              top: Math.max(0, offsetPosition),
-              behavior: 'smooth'
-            });
+            try {
+              targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (err) {
+              const siteHeaderEl = document.getElementById('siteHeader');
+              const headerHeight = siteHeaderEl ? siteHeaderEl.offsetHeight : 80;
+              const elementPosition = targetElement.getBoundingClientRect().top;
+              const offsetPosition = elementPosition + window.pageYOffset - (headerHeight + 10);
+              window.scrollTo({
+                top: Math.max(0, offsetPosition),
+                behavior: 'smooth'
+              });
+            }
 
             // Update active state in nav
             document.querySelectorAll('.desktop-nav .nav-item, .mobile-nav-item').forEach((navLink) => {
@@ -713,7 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 navLink.classList.remove('active');
               }
             });
-          }, 80);
+          }, 60);
         }
       }
     });
@@ -1670,6 +1676,7 @@ document.addEventListener('DOMContentLoaded', () => {
       navigator.serviceWorker.register('/sw.js')
         .then((reg) => {
           console.log('✅ BVN PWA Service Worker Registered Successfully! Scope:', reg.scope);
+          reg.update().catch(() => {});
         })
         .catch((err) => {
           console.log('BVN PWA Service Worker Registration Note:', err);

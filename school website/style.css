@@ -3829,13 +3829,14 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
   height: 100dvh;
   background-color: #08182b;
   color: #ffffff;
-  z-index: 100000;
-  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.65);
+  z-index: 1000000;
+  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.75);
   display: flex;
   flex-direction: column;
   transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   border-left: 1px solid rgba(212, 175, 55, 0.25);
   overflow: hidden;
+  pointer-events: auto !important;
 }
 
 @media (min-width: 993px) {
@@ -3954,16 +3955,19 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
   inset: 0;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
   width: 100vw;
   height: 100vh;
   height: 100dvh;
-  background: rgba(4, 13, 24, 0.72);
-  z-index: 99998;
+  background: rgba(4, 13, 24, 0.68);
+  z-index: 999990;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s ease;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .drawer-backdrop.is-open {

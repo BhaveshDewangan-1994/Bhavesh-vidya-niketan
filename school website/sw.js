@@ -1,5 +1,5 @@
-/* Service Worker for Bhavesh Vidya Niketan Progressive Web App */
-const CACHE_NAME = 'bvn-cache-v1';
+/* Service Worker for Bhavesh Vidya Niketan Progressive Web App (v2) */
+const CACHE_NAME = 'bvn-cache-v2';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -11,12 +11,13 @@ const PRECACHE_URLS = [
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(PRECACHE_URLS).catch((err) => {
         console.warn('BVN ServiceWorker Pre-cache notice:', err);
       });
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
@@ -26,6 +27,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cache) => {
           if (cache !== CACHE_NAME) {
+            console.log('Clearing old cache:', cache);
             return caches.delete(cache);
           }
         })
@@ -35,43 +37,56 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests and skip Web3Forms API
-  if (event.request.method !== 'GET' || event.request.url.includes('api.web3forms.com')) {
+  // Only handle GET requests and skip Web3Forms / Supabase live API
+  if (
+    event.request.method !== 'GET' || 
+    event.request.url.includes('api.web3forms.com') ||
+    event.request.url.includes('supabase.co')
+  ) {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch in background to keep cache fresh (stale-while-revalidate)
-        fetch(event.request).then((networkResponse) => {
+  // Network-First for HTML, CSS, and JS so updates reflect immediately
+  const isCoreResource = 
+    event.request.mode === 'navigate' ||
+    event.request.url.endsWith('.html') ||
+    event.request.url.includes('script.js') ||
+    event.request.url.includes('style.css');
+
+  if (isCoreResource) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse.clone());
+              cache.put(event.request, responseToCache);
             });
           }
-        }).catch(() => {/* Offline fallback silent catch */});
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cached) => {
+            return cached || caches.match('/index.html');
+          });
+        })
+    );
+    return;
+  }
 
-        return cachedResponse;
-      }
-
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
+  // Stale-While-Revalidate for images, icons, and static assets
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, networkResponse.clone());
+          });
         }
+        return networkResponse;
+      }).catch(() => {/* Offline fallback silent catch */});
 
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
-        return response;
-      }).catch(() => {
-        // Offline fallback
-        if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
-        }
-      });
+      return cachedResponse || fetchPromise;
     })
   );
 });
