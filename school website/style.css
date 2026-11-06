@@ -3902,23 +3902,30 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
 
 .mobile-nav-links {
   list-style: none;
-  padding: 20px;
+  padding: 16px 20px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   flex-grow: 1;
 }
 
 .mobile-nav-item {
   display: block;
-  padding: 12px 0;
-  font-size: 1rem;
+  padding: 13px 0;
+  font-size: 1.02rem;
   color: #e2e8f0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   font-weight: 500;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(212, 175, 55, 0.25);
+  transition: color var(--transition-fast), padding-left var(--transition-fast);
 }
 
-.mobile-nav-item:hover {
+.mobile-nav-item:hover,
+.mobile-nav-item:active {
   color: var(--color-gold-bright);
-  padding-left: 6px;
+  padding-left: 8px;
 }
 
 .mobile-drawer-footer {

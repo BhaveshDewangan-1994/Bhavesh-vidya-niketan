@@ -609,34 +609,38 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (mobileDrawerClose) {
-    mobileDrawerClose.addEventListener('click', closeDrawer);
+    mobileDrawerClose.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeDrawer();
+    });
   }
 
   if (drawerBackdrop) {
-    drawerBackdrop.addEventListener('click', closeDrawer);
+    drawerBackdrop.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeDrawer();
+    });
     drawerBackdrop.addEventListener('touchend', (e) => {
       e.preventDefault();
       closeDrawer();
     }, { passive: false });
   }
 
-  // Bulletproof Outside-Tap & Click Listener: Closes mobile drawer when touching anywhere outside the drawer box
+  // Closes mobile drawer when clicking outside the drawer box
   const handleOutsideDrawer = (e) => {
     if (!mobileDrawer || !mobileDrawer.classList.contains('is-open')) return;
     
-    // Ignore clicks/touches originating from inside the drawer itself
+    // Ignore clicks originating from inside the drawer itself
     if (mobileDrawer.contains(e.target)) return;
     
-    // Ignore clicks/touches on the toggle buttons (they handle their own state)
-    if (mobileMenuToggle && mobileMenuToggle.contains(e.target)) return;
-    if (mobileBottomMenuBtn && mobileBottomMenuBtn.contains(e.target)) return;
+    // Ignore clicks on the toggle buttons (they handle their own toggle)
+    if (mobileMenuToggle && (mobileMenuToggle === e.target || mobileMenuToggle.contains(e.target))) return;
+    if (mobileBottomMenuBtn && (mobileBottomMenuBtn === e.target || mobileBottomMenuBtn.contains(e.target))) return;
 
-    // Tapped or clicked outside the drawer box
     closeDrawer();
   };
 
-  document.addEventListener('click', handleOutsideDrawer, true);
-  document.addEventListener('touchend', handleOutsideDrawer, { passive: true });
+  document.addEventListener('click', handleOutsideDrawer);
 
   // Escape key closes mobile drawer
   document.addEventListener('keydown', (e) => {
@@ -645,27 +649,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Feature 5: High-Performance Passive Touch Gesture (Swipe-to-Close Drawer)
+  // High-Performance Passive Touch Gesture (Swipe-to-Close Drawer to the right)
   if (mobileDrawer) {
     let touchStartX = 0;
+    let touchStartY = 0;
     mobileDrawer.addEventListener('touchstart', (e) => {
-      touchStartX = e.changedTouches[0].screenX;
+      if (e.changedTouches && e.changedTouches[0]) {
+        touchStartX = e.changedTouches[0].clientX;
+        touchStartY = e.changedTouches[0].clientY;
+      }
     }, { passive: true });
 
     mobileDrawer.addEventListener('touchend', (e) => {
-      const touchEndX = e.changedTouches[0].screenX;
-      if (touchStartX - touchEndX > 65) {
-        closeDrawer();
+      if (e.changedTouches && e.changedTouches[0]) {
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const diffX = touchEndX - touchStartX;
+        const diffY = Math.abs(touchEndY - touchStartY);
+        // Drawer is positioned on the right side.
+        // User must swipe right (diffX > 70) with minimal vertical scrolling (diffY < 40).
+        if (diffX > 70 && diffY < 40) {
+          closeDrawer();
+        }
       }
     }, { passive: true });
   }
 
-  // Auto-close mobile drawer on link/button click and perform smooth scroll
-  const mobileInteractiveLinks = document.querySelectorAll(
-    '#mobileDrawer .mobile-nav-item, #mobileDrawer .btn, #mobileDrawer a[href^="#"]'
+  // Auto-close mobile drawer on nav item click and perform smooth scroll
+  const mobileNavItems = document.querySelectorAll(
+    '#mobileDrawer .mobile-nav-item, #mobileDrawer a[href^="#"]'
   );
 
-  mobileInteractiveLinks.forEach((item) => {
+  mobileNavItems.forEach((item) => {
     item.addEventListener('click', function(e) {
       const href = this.getAttribute('href');
       
@@ -698,7 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 navLink.classList.remove('active');
               }
             });
-          }, 60);
+          }, 80);
         }
       }
     });
