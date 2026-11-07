@@ -1847,7 +1847,107 @@ document.addEventListener('DOMContentLoaded', () => {
     let voiceSessionId = 'voice_' + Date.now();
     let isListening = false;
     let isSpeaking = false;
+    let vapiActive = false;
     const n8nWebhook = 'https://bhaveshdewangan.app.n8n.cloud/webhook/0690f739-84cc-4a9d-81fc-8ce4ba7be1e9/chat';
+
+    // 🚀 Vapi Enterprise WebRTC Voice Engine Setup
+    const setupVapiEngine = () => {
+      if (!window.vapiSDK || typeof window.vapiSDK.run !== 'function') {
+        setTimeout(setupVapiEngine, 250);
+        return;
+      }
+      if (window.vapiInstance) return;
+
+      const cfg = window.VAPI_CONFIG || {
+        apiKey: "de9456a1-64f0-4e79-8a53-212596add6b9",
+        assistantId: "b2a48591-e7e0-4082-8e6a-1c1e4c29a1ed"
+      };
+
+      try {
+        window.vapiInstance = window.vapiSDK.run({
+          apiKey: cfg.apiKey,
+          assistant: cfg.assistantId,
+          config: {
+            position: "bottom-left",
+            offset: "24px",
+            width: "56px",
+            height: "56px",
+            idle: {
+              color: `rgb(16, 185, 129)`,
+              type: "pill",
+              title: "Call Naina AI",
+              subtitle: "24/7 School Admissions",
+              icon: `https://unpkg.com/lucide-static@0.321.0/icons/phone-call.svg`,
+            },
+            loading: {
+              color: `rgb(245, 158, 11)`,
+              type: "pill",
+              title: "Connecting...",
+              subtitle: "Connecting to Naina",
+              icon: `https://unpkg.com/lucide-static@0.321.0/icons/loader-2.svg`,
+            },
+            active: {
+              color: `rgb(239, 68, 68)`,
+              type: "pill",
+              title: "In Call with Naina",
+              subtitle: "Tap to end",
+              icon: `https://unpkg.com/lucide-static@0.321.0/icons/phone-off.svg`,
+            },
+          }
+        });
+
+        if (window.vapiInstance) {
+          window.vapiInstance.on('call-start', () => {
+            vapiActive = true;
+            backdrop.classList.add('is-active');
+            document.body.style.overflow = 'hidden';
+            if (statusText) statusText.textContent = '🟢 नैना से लाइव कॉल कनेक्टेड';
+            if (micBtn) micBtn.classList.add('is-listening');
+            if (micLabel) micLabel.textContent = 'कॉल सक्रिय • बोलते रहें';
+          });
+
+          window.vapiInstance.on('call-end', () => {
+            vapiActive = false;
+            backdrop.classList.remove('is-active');
+            document.body.style.overflow = '';
+            if (statusText) statusText.textContent = 'कॉल समाप्त • धन्यवाद';
+            if (micBtn) micBtn.classList.remove('is-listening');
+            if (micLabel) micLabel.textContent = 'बोलने के लिए दबाएं';
+            if (avatarStage) avatarStage.classList.remove('is-speaking');
+          });
+
+          window.vapiInstance.on('speech-start', () => {
+            if (avatarStage) avatarStage.classList.add('is-speaking');
+            if (statusText) statusText.textContent = '🔊 नैना बोल रही हैं...';
+          });
+
+          window.vapiInstance.on('speech-end', () => {
+            if (avatarStage) avatarStage.classList.remove('is-speaking');
+            if (statusText) statusText.textContent = '🟢 सुन रही हूँ... कृपया बोलें';
+          });
+
+          window.vapiInstance.on('message', (msg) => {
+            if (msg && msg.type === 'transcript') {
+              if (msg.role === 'user' && msg.transcript) {
+                if (userMsg) {
+                  userMsg.style.display = 'block';
+                  userMsg.textContent = msg.transcript;
+                  if (transcriptBox) transcriptBox.scrollTop = transcriptBox.scrollHeight;
+                }
+              } else if (msg.role === 'assistant' && msg.transcript) {
+                if (botMsg) {
+                  botMsg.textContent = `"${msg.transcript}"`;
+                  if (transcriptBox) transcriptBox.scrollTop = transcriptBox.scrollHeight;
+                }
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Vapi setup note:', err);
+      }
+    };
+    setupVapiEngine();
 
     // Keep global reference to active utterance queue to prevent Mobile Garbage Collection
     window._nainaUtteranceQueue = [];
@@ -2073,6 +2173,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Open Call Modal
     const startCall = () => {
+      // 🚀 Prefer Vapi Enterprise WebRTC Voice Engine
+      if (window.vapiInstance && window.VAPI_CONFIG) {
+        try {
+          if (!vapiActive) {
+            window.vapiInstance.start(window.VAPI_CONFIG.assistantId);
+          }
+          backdrop.classList.add('is-active');
+          document.body.style.overflow = 'hidden';
+          if (statusText) statusText.textContent = '🟢 नैना से कनेक्ट हो रहा है...';
+          return;
+        } catch (e) {
+          console.warn('Vapi start fallback notice:', e);
+        }
+      }
+
       warmUpMobileSpeech();
       backdrop.classList.add('is-active');
       document.body.style.overflow = 'hidden';
@@ -2089,6 +2204,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Close Call Modal
     const endCall = () => {
+      if (vapiActive && window.vapiInstance) {
+        try { window.vapiInstance.stop(); } catch(e) {}
+      }
       if (window.speechSynthesis) window.speechSynthesis.cancel();
       if (recognition && isListening) {
         try { recognition.stop(); } catch(e) {}
@@ -2188,11 +2306,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Quick Question Chips Listener
     chipBtns.forEach(btn => {
       btn.addEventListener('click', () => {
-        warmUpMobileSpeech();
         const query = btn.getAttribute('data-query');
-        if (query) {
-          askNaina(query);
+        if (!query) return;
+
+        if (vapiActive && window.vapiInstance && typeof window.vapiInstance.send === 'function') {
+          try {
+            window.vapiInstance.send({
+              type: 'add-message',
+              message: { role: 'user', content: query }
+            });
+            if (userMsg) {
+              userMsg.style.display = 'block';
+              userMsg.textContent = query;
+              if (transcriptBox) transcriptBox.scrollTop = transcriptBox.scrollHeight;
+            }
+            return;
+          } catch (e) {}
         }
+
+        warmUpMobileSpeech();
+        askNaina(query);
       });
     });
 
@@ -2200,10 +2333,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (textForm) {
       textForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        warmUpMobileSpeech();
         if (textInput && textInput.value.trim()) {
           const q = textInput.value.trim();
           textInput.value = '';
+
+          if (vapiActive && window.vapiInstance && typeof window.vapiInstance.send === 'function') {
+            try {
+              window.vapiInstance.send({
+                type: 'add-message',
+                message: { role: 'user', content: q }
+              });
+              if (userMsg) {
+                userMsg.style.display = 'block';
+                userMsg.textContent = q;
+                if (transcriptBox) transcriptBox.scrollTop = transcriptBox.scrollHeight;
+              }
+              return;
+            } catch (e) {}
+          }
+
+          warmUpMobileSpeech();
           askNaina(q);
         }
       });
