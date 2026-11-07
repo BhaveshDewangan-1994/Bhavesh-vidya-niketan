@@ -1838,6 +1838,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const botMsg = document.getElementById('nainaLiveBotMsg');
     const userMsg = document.getElementById('nainaLiveUserMsg');
     const transcriptBox = document.getElementById('nainaTranscriptBox');
+    const chipBtns = document.querySelectorAll('.naina-chip-btn');
+    const textForm = document.getElementById('nainaTextForm');
+    const textInput = document.getElementById('nainaTextInput');
 
     if (!backdrop) return;
 
@@ -1846,14 +1849,30 @@ document.addEventListener('DOMContentLoaded', () => {
     let isSpeaking = false;
     const n8nWebhook = 'https://bhaveshdewangan.app.n8n.cloud/webhook/0690f739-84cc-4a9d-81fc-8ce4ba7be1e9/chat';
 
+    // Pre-cache browser voices
+    let cachedVoices = [];
+    const refreshVoices = () => {
+      if ('speechSynthesis' in window) {
+        cachedVoices = window.speechSynthesis.getVoices() || [];
+      }
+    };
+    refreshVoices();
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = refreshVoices;
+    }
+
     // Speech Recognition setup (Speech-to-Text)
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = null;
     if (SpeechRecognition) {
-      recognition = new SpeechRecognition();
-      recognition.lang = 'hi-IN';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
+      try {
+        recognition = new SpeechRecognition();
+        recognition.lang = 'hi-IN';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+      } catch (e) {
+        console.warn('SpeechRecognition initialization note:', e);
+      }
     }
 
     // Speech Synthesis setup (Text-to-Speech)
@@ -1863,29 +1882,50 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      window.speechSynthesis.cancel(); // Stop any pending speech
+      try {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.resume();
+      } catch (e) {}
 
-      // Clean markdown tags & symbols for natural speech
+      // Clean text for natural verbal reading
       const cleanText = text
         .replace(/^[=\s-]+/, '')
-        .replace(/\*\*/g, '')
-        .replace(/\*/g, '')
-        .replace(/#/g, '')
-        .replace(/•/g, '')
+        .replace(/[*#•`_~]/g, '')
         .replace(/₹/g, 'रुपए ')
         .trim();
 
       const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = 'hi-IN';
-      utterance.rate = 0.96; // Courteous, natural Indian pace
-      utterance.pitch = 1.05; // Friendly feminine pitch
 
-      // Pick best Indian Hindi voice if available
-      const voices = window.speechSynthesis.getVoices();
-      const hindiVoice = voices.find(v => v.lang.includes('hi') || v.name.toLowerCase().includes('hindi') || v.name.toLowerCase().includes('kalpana') || v.name.toLowerCase().includes('lekha'));
+      if (cachedVoices.length === 0) {
+        refreshVoices();
+      }
+
+      // Pick best voice for Hindi/Indian pronunciation
+      const hindiVoice = cachedVoices.find(v => {
+        const lang = (v.lang || '').toLowerCase();
+        const name = (v.name || '').toLowerCase();
+        return lang.includes('hi') || lang.includes('in') || name.includes('hindi') || name.includes('kalpana') || name.includes('lekha') || name.includes('heera') || name.includes('ravi');
+      });
+
       if (hindiVoice) {
         utterance.voice = hindiVoice;
+        utterance.lang = hindiVoice.lang || 'hi-IN';
+      } else {
+        utterance.lang = 'hi-IN';
       }
+
+      utterance.rate = 0.98;
+      utterance.pitch = 1.05;
+
+      let isFinished = false;
+      const completeUtterance = () => {
+        if (isFinished) return;
+        isFinished = true;
+        isSpeaking = false;
+        if (avatarStage) avatarStage.classList.remove('is-speaking');
+        if (statusText) statusText.textContent = 'कॉल सक्रिय • आपकी बारी, बोलें या लिखें';
+        if (onEndCallback) onEndCallback();
+      };
 
       utterance.onstart = () => {
         isSpeaking = true;
@@ -1893,21 +1933,73 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statusText) statusText.textContent = 'नैना बोल रही हैं...';
       };
 
-      utterance.onend = () => {
-        isSpeaking = false;
-        if (avatarStage) avatarStage.classList.remove('is-speaking');
-        if (statusText) statusText.textContent = 'कॉल सक्रिय • आपकी बारी, बोलें';
-        if (onEndCallback) onEndCallback();
+      utterance.onend = completeUtterance;
+      utterance.onerror = (err) => {
+        console.warn('Utterance playback notice:', err);
+        completeUtterance();
       };
 
-      utterance.onerror = () => {
-        isSpeaking = false;
-        if (avatarStage) avatarStage.classList.remove('is-speaking');
-        if (statusText) statusText.textContent = 'कॉल सक्रिय • आपकी बारी, बोलें';
-        if (onEndCallback) onEndCallback();
-      };
+      // Watchdog failsafe: Prevents UI from staying frozen if browser audio engine stalls
+      const maxSpeechMs = Math.max(2500, cleanText.length * 90);
+      setTimeout(() => {
+        if (isSpeaking) completeUtterance();
+      }, maxSpeechMs);
 
       window.speechSynthesis.speak(utterance);
+    };
+
+    // Central function to send question to n8n AI Counselor and deliver audio answer
+    const askNaina = async (queryText) => {
+      const trimmedQuery = queryText.trim();
+      if (!trimmedQuery) return;
+
+      // Stop recognition while processing
+      if (recognition && isListening) {
+        try { recognition.stop(); } catch(e) {}
+      }
+      isListening = false;
+      if (micBtn) micBtn.classList.remove('is-listening');
+      if (micLabel) micLabel.textContent = 'बोलने के लिए दबाएं';
+
+      // Display user question
+      if (userMsg) {
+        userMsg.style.display = 'block';
+        userMsg.textContent = `👤 आप: "${trimmedQuery}"`;
+        if (transcriptBox) transcriptBox.scrollTop = transcriptBox.scrollHeight;
+      }
+
+      if (statusText) statusText.textContent = 'नैना उत्तर तैयार कर रही हैं...';
+      if (botMsg) botMsg.textContent = '...कृपया प्रतीक्षा करें...';
+
+      // Dispatch to n8n webhook
+      try {
+        const response = await fetch(n8nWebhook, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'sendMessage',
+            sessionId: voiceSessionId,
+            chatInput: `[वॉयस कॉल] ${trimmedQuery}`
+          })
+        });
+
+        const data = await response.json();
+        let reply = (data && data.output) ? data.output : 'नमस्ते! आपका सवाल दर्ज हो गया है। क्या आप कोई अन्य जानकारी चाहते हैं?';
+        reply = reply.replace(/^[=\s-]+/, '').trim();
+
+        if (botMsg) {
+          botMsg.textContent = reply;
+          if (transcriptBox) transcriptBox.scrollTop = transcriptBox.scrollHeight;
+        }
+
+        // Speak response out loud in Hindi
+        speakHindi(reply);
+      } catch (err) {
+        console.error('n8n voice webhook dispatch error:', err);
+        const fallback = 'नमस्ते! मुझे आपका सवाल मिल गया है। आप सीधे हमारे हेल्पलाइन नंबर +91 98765 43210 पर भी संपर्क कर सकते हैं।';
+        if (botMsg) botMsg.textContent = fallback;
+        speakHindi(fallback);
+      }
     };
 
     // Open Call Modal
@@ -1918,19 +2010,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (statusText) statusText.textContent = 'कॉल कनेक्टेड (24/7 AI)';
       if (userMsg) userMsg.style.display = 'none';
 
-      // Initial Greeting
-      const greeting = 'नमस्ते! भावेश विद्या निकेतन में आपका स्वागत है। मैं विद्यालय की 24/7 AI काउंसलर नैना हूँ। आप मुझसे फीस, बस सुविधा या डायरेक्टर सर से मीटिंग के बारे में सीधे पूछ सकते हैं।';
+      // Initial Courteous Greeting
+      const greeting = 'नमस्ते! भावेश विद्या निकेतन में आपका स्वागत है। मैं 24/7 AI प्रवेश काउंसलर नैना बोल रही हूँ। आप मुझसे फीस, बस सुविधा या डायरेक्टर भावेश सर से मीटिंग के बारे में सीधे बोलकर या नीचे टैप करके पूछ सकते हैं।';
       if (botMsg) botMsg.textContent = `"${greeting}"`;
-      speakHindi(greeting, () => {
-        // Automatically start listening after greeting
-        startListening();
-      });
+
+      speakHindi(greeting);
     };
 
     // Close Call Modal
     const endCall = () => {
       if (window.speechSynthesis) window.speechSynthesis.cancel();
-      if (recognition && isListening) recognition.stop();
+      if (recognition && isListening) {
+        try { recognition.stop(); } catch(e) {}
+      }
       isListening = false;
       isSpeaking = false;
       backdrop.classList.remove('is-active');
@@ -1943,11 +2035,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const startListening = () => {
       if (isSpeaking) {
         window.speechSynthesis.cancel();
+        isSpeaking = false;
         if (avatarStage) avatarStage.classList.remove('is-speaking');
       }
 
       if (!recognition) {
-        alert('आपके ब्राउज़र में स्पीच रिकग्निशन समर्थित नहीं है। कृपया गूगल क्रोम या एज ब्राउज़र का उपयोग करें, या नीचे दिए गए टेक्स्ट चैट विजेट का उपयोग करें।');
+        alert('आपके इस ब्राउज़र में माइक्रोफ़ोन रिकग्निशन समर्थित नहीं है। आप नीचे दिए गए सुझाव बटन या टेक्स्ट बॉक्स से आसानी से पूछ सकते हैं!');
         return;
       }
 
@@ -1955,61 +2048,25 @@ document.addEventListener('DOMContentLoaded', () => {
         isListening = true;
         if (micBtn) micBtn.classList.add('is-listening');
         if (micLabel) micLabel.textContent = 'सुन रही हूँ... बोलिए';
-        if (statusText) statusText.textContent = 'सुन रही हूँ... कृपया बोलें';
+        if (statusText) statusText.textContent = '🔴 सुन रही हूँ... कृपया बोलें';
         recognition.start();
       } catch (err) {
         console.warn('Recognition start state notice:', err);
+        if (isListening) {
+          try { recognition.stop(); } catch(e) {}
+          isListening = false;
+          if (micBtn) micBtn.classList.remove('is-listening');
+          if (micLabel) micLabel.textContent = 'बोलने के लिए दबाएं';
+        }
       }
     };
 
-    // Recognition event handlers
+    // Speech Recognition Event Listeners
     if (recognition) {
-      recognition.onresult = async (event) => {
-        isListening = false;
-        if (micBtn) micBtn.classList.remove('is-listening');
-        if (micLabel) micLabel.textContent = 'बोलने के लिए दबाएं';
-
+      recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript.trim();
-        if (!transcript) return;
-
-        // Display user question
-        if (userMsg) {
-          userMsg.style.display = 'block';
-          userMsg.textContent = `👤 आप: "${transcript}"`;
-          if (transcriptBox) transcriptBox.scrollTop = transcriptBox.scrollHeight;
-        }
-
-        if (statusText) statusText.textContent = 'नैना सोच रही हैं...';
-        if (botMsg) botMsg.textContent = '...उत्तर तैयार किया जा रहा है...';
-
-        // Dispatch question to n8n AI counselor webhook
-        try {
-          const response = await fetch(n8nWebhook, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'sendMessage',
-              sessionId: voiceSessionId,
-              chatInput: `[वॉयस कॉल] ${transcript}`
-            })
-          });
-
-          const data = await response.json();
-          let replyText = (data && data.output) ? data.output : 'नमस्ते, मुझे आपका सवाल प्राप्त हुआ है। क्या आप कोई अन्य जानकारी चाहते हैं?';
-          replyText = replyText.replace(/^[=\s-]+/, '').trim();
-
-          if (botMsg) {
-            botMsg.textContent = replyText;
-            if (transcriptBox) transcriptBox.scrollTop = transcriptBox.scrollHeight;
-          }
-
-          // Speak response
-          speakHindi(replyText);
-        } catch (fetchErr) {
-          console.error('n8n voice webhook dispatch error:', fetchErr);
-          const fallback = 'क्षमा करें, नेटवर्क में हल्की देरी है। आप सीधे हमारे हेल्पलाइन नंबर +91 98765 43210 पर भी संपर्क कर सकते हैं।';
-          if (botMsg) botMsg.textContent = fallback;
-          speakHindi(fallback);
+        if (transcript) {
+          askNaina(transcript);
         }
       };
 
@@ -2018,7 +2075,12 @@ document.addEventListener('DOMContentLoaded', () => {
         isListening = false;
         if (micBtn) micBtn.classList.remove('is-listening');
         if (micLabel) micLabel.textContent = 'बोलने के लिए दबाएं';
-        if (statusText) statusText.textContent = 'कॉल सक्रिय • बोलने के लिए माइक दबाएं';
+
+        if (event.error === 'not-allowed') {
+          if (statusText) statusText.textContent = '⚠️ माइक की अनुमति दें या नीचे सुझाव चुनें';
+        } else {
+          if (statusText) statusText.textContent = 'कॉल सक्रिय • बोलने के लिए माइक दबाएं';
+        }
       };
 
       recognition.onend = () => {
@@ -2028,22 +2090,48 @@ document.addEventListener('DOMContentLoaded', () => {
       };
     }
 
-    // Attach Event Listeners
+    // Attach Event Listeners to Open/Close Buttons
     if (openNavBtn) openNavBtn.addEventListener('click', startCall);
     if (openHeroBtn) openHeroBtn.addEventListener('click', startCall);
     if (openMobBtn) openMobBtn.addEventListener('click', startCall);
     if (closeBtn) closeBtn.addEventListener('click', endCall);
     if (endCallBtn) endCallBtn.addEventListener('click', endCall);
 
+    // Microphone toggle button
     if (micBtn) {
       micBtn.addEventListener('click', () => {
         if (isListening) {
-          if (recognition) recognition.stop();
+          if (recognition) {
+            try { recognition.stop(); } catch(e) {}
+          }
           isListening = false;
           micBtn.classList.remove('is-listening');
           if (micLabel) micLabel.textContent = 'बोलने के लिए दबाएं';
+          if (statusText) statusText.textContent = 'कॉल सक्रिय • बोलने के लिए माइक दबाएं';
         } else {
           startListening();
+        }
+      });
+    }
+
+    // Quick Question Chips Listener
+    chipBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const query = btn.getAttribute('data-query');
+        if (query) {
+          askNaina(query);
+        }
+      });
+    });
+
+    // Dual Fallback Text Input Form Listener
+    if (textForm) {
+      textForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (textInput && textInput.value.trim()) {
+          const q = textInput.value.trim();
+          textInput.value = '';
+          askNaina(q);
         }
       });
     }

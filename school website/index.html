@@ -181,7 +181,7 @@
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="style.css?v=20261107_bvn_suite1">
+  <link rel="stylesheet" href="style.css?v=20261107_bvn_suite2">
 
   <!-- Feature 1: Modern Image Fallback Initializer (with Official School Logo) -->
   <script>
@@ -2489,10 +2489,29 @@
       <!-- Live Real-Time Captions / Transcripts -->
       <div class="naina-transcript-box" id="nainaTranscriptBox">
         <div class="naina-bubble naina-bot-msg" id="nainaLiveBotMsg">
-          "नमस्ते! 🙏 मैं भावेश विद्या निकेतन की AI काउंसलर नैना हूँ। आप मुझसे फीस, बस सुविधा या डायरेक्टर सर से मीटिंग के बारे में सीधे बोलकर पूछ सकते हैं।"
+          "नमस्ते! 🙏 मैं भावेश विद्या निकेतन की AI काउंसलर नैना हूँ। आप मुझसे फीस, बस सुविधा या डायरेक्टर सर से मीटिंग के बारे में सीधे बोलकर या नीचे लिखकर पूछ सकते हैं।"
         </div>
         <div class="naina-bubble naina-user-msg" id="nainaLiveUserMsg" style="display:none;"></div>
       </div>
+
+      <!-- Quick Suggested Questions Chips -->
+      <div class="naina-chips-wrapper">
+        <span class="naina-chips-label"><i class="fa-solid fa-wand-magic-sparkles"></i> तुरंत पूछने के लिए टैप करें:</span>
+        <div class="naina-chips-row">
+          <button type="button" class="naina-chip-btn" data-query="कक्षा 10 की फीस कितनी है?">कक्षा 10 की फीस</button>
+          <button type="button" class="naina-chip-btn" data-query="कक्षा 5 की फीस कितनी है?">कक्षा 5 की फीस</button>
+          <button type="button" class="naina-chip-btn" data-query="मुझे डायरेक्टर सर से मिलना है, समय बताएं">डायरेक्टर मीटिंग</button>
+          <button type="button" class="naina-chip-btn" data-query="स्कूल बस और ट्रांसपोर्ट सुविधा क्या है?">बस सुविधा</button>
+        </div>
+      </div>
+
+      <!-- Dual Input Form (Voice + Quick Text Support) -->
+      <form class="naina-text-fallback-form" id="nainaTextForm">
+        <input type="text" id="nainaTextInput" placeholder="यहाँ लिखकर या माइक दबाकर पूछें..." autocomplete="off" />
+        <button type="submit" id="nainaTextSubmitBtn" aria-label="सवाल भेजें">
+          <i class="fa-solid fa-paper-plane"></i>
+        </button>
+      </form>
 
       <!-- Interactive Control Bar -->
       <div class="naina-controls-row">
@@ -2549,6 +2568,6 @@
   </script>
 
   <!-- JavaScript Application -->
-  <script src="script.js?v=20261107_bvn_suite1" defer></script>
+  <script src="script.js?v=20261107_bvn_suite2" defer></script>
 </body>
 </html>
