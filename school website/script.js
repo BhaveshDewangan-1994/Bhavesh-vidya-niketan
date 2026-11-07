@@ -1849,6 +1849,30 @@ document.addEventListener('DOMContentLoaded', () => {
     let isSpeaking = false;
     const n8nWebhook = 'https://bhaveshdewangan.app.n8n.cloud/webhook/0690f739-84cc-4a9d-81fc-8ce4ba7be1e9/chat';
 
+    // Keep global reference to active utterance queue to prevent Mobile Garbage Collection
+    window._nainaUtteranceQueue = [];
+
+    // Pre-warm speech synthesis immediately on user interaction
+    const warmUpMobileSpeech = () => {
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.resume();
+          const dummy = new SpeechSynthesisUtterance(' ');
+          dummy.volume = 0.01;
+          dummy.rate = 2.0;
+          window.speechSynthesis.speak(dummy);
+        } catch (e) {}
+      }
+    };
+
+    // Chrome Mobile Heartbeat: Prevents speech engine from pausing or dying after 10-15 seconds
+    setInterval(() => {
+      if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      }
+    }, 3500);
+
     // Pre-cache browser voices
     let cachedVoices = [];
     const refreshVoices = () => {
@@ -1875,7 +1899,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Speech Synthesis setup (Text-to-Speech)
+    // Speech Synthesis setup (Chunked Sequential Audio for 100% Mobile Reliability)
     const speakHindi = (text, onEndCallback) => {
       if (!('speechSynthesis' in window)) {
         if (onEndCallback) onEndCallback();
@@ -1894,58 +1918,98 @@ document.addEventListener('DOMContentLoaded', () => {
         .replace(/₹/g, 'रुपए ')
         .trim();
 
-      const utterance = new SpeechSynthesisUtterance(cleanText);
+      if (!cleanText) {
+        if (onEndCallback) onEndCallback();
+        return;
+      }
+
+      // Split into bite-sized sentence chunks (prevents mobile 15-second audio dropouts)
+      const rawChunks = cleanText.split(/([।\n.?!]+)/);
+      const chunks = [];
+      let temp = '';
+      for (let i = 0; i < rawChunks.length; i++) {
+        temp += rawChunks[i];
+        if (temp.length > 70 || rawChunks[i].match(/[।\n.?!]/)) {
+          if (temp.trim()) chunks.push(temp.trim());
+          temp = '';
+        }
+      }
+      if (temp.trim()) chunks.push(temp.trim());
+      if (chunks.length === 0) chunks.push(cleanText);
 
       if (cachedVoices.length === 0) {
         refreshVoices();
       }
 
-      // Pick best voice for Hindi/Indian pronunciation
+      // Find best Hindi voice or Indian English fallback
       const hindiVoice = cachedVoices.find(v => {
         const lang = (v.lang || '').toLowerCase();
         const name = (v.name || '').toLowerCase();
         return lang.includes('hi') || lang.includes('in') || name.includes('hindi') || name.includes('kalpana') || name.includes('lekha') || name.includes('heera') || name.includes('ravi');
       });
 
-      if (hindiVoice) {
-        utterance.voice = hindiVoice;
-        utterance.lang = hindiVoice.lang || 'hi-IN';
-      } else {
-        utterance.lang = 'hi-IN';
-      }
+      // Clear previous queue
+      window._nainaUtteranceQueue = [];
+      let currentChunkIdx = 0;
 
-      utterance.rate = 0.98;
-      utterance.pitch = 1.05;
+      isSpeaking = true;
+      if (avatarStage) avatarStage.classList.add('is-speaking');
+      if (statusText) statusText.textContent = 'नैना बोल रही हैं...';
 
-      let isFinished = false;
-      const completeUtterance = () => {
-        if (isFinished) return;
-        isFinished = true;
-        isSpeaking = false;
-        if (avatarStage) avatarStage.classList.remove('is-speaking');
-        if (statusText) statusText.textContent = 'कॉल सक्रिय • आपकी बारी, बोलें या लिखें';
-        if (onEndCallback) onEndCallback();
+      const speakNextChunk = () => {
+        if (currentChunkIdx >= chunks.length) {
+          isSpeaking = false;
+          window._nainaUtteranceQueue = [];
+          if (avatarStage) avatarStage.classList.remove('is-speaking');
+          if (statusText) statusText.textContent = 'कॉल सक्रिय • आपकी बारी, बोलें या लिखें';
+          if (onEndCallback) onEndCallback();
+          return;
+        }
+
+        const chunkText = chunks[currentChunkIdx++];
+        const utterance = new SpeechSynthesisUtterance(chunkText);
+        window._nainaUtteranceQueue.push(utterance); // Retain reference to prevent Mobile Garbage Collection
+
+        if (hindiVoice) {
+          utterance.voice = hindiVoice;
+          utterance.lang = hindiVoice.lang || 'hi-IN';
+        } else {
+          utterance.lang = 'hi-IN';
+        }
+
+        utterance.rate = 0.98;
+        utterance.pitch = 1.05;
+
+        let chunkEnded = false;
+        const handleChunkDone = () => {
+          if (chunkEnded) return;
+          chunkEnded = true;
+          speakNextChunk();
+        };
+
+        utterance.onend = handleChunkDone;
+        utterance.onerror = (err) => {
+          console.warn('Chunk playback notice:', err);
+          handleChunkDone();
+        };
+
+        // Chunk watchdog: Each short chunk shouldn't exceed 8 seconds
+        setTimeout(() => {
+          if (!chunkEnded && isSpeaking) {
+            handleChunkDone();
+          }
+        }, Math.max(2000, chunkText.length * 120));
+
+        try {
+          window.speechSynthesis.resume();
+          window.speechSynthesis.speak(utterance);
+        } catch (spErr) {
+          console.warn('Speak chunk error:', spErr);
+          handleChunkDone();
+        }
       };
 
-      utterance.onstart = () => {
-        isSpeaking = true;
-        if (avatarStage) avatarStage.classList.add('is-speaking');
-        if (statusText) statusText.textContent = 'नैना बोल रही हैं...';
-      };
-
-      utterance.onend = completeUtterance;
-      utterance.onerror = (err) => {
-        console.warn('Utterance playback notice:', err);
-        completeUtterance();
-      };
-
-      // Watchdog failsafe: Prevents UI from staying frozen if browser audio engine stalls
-      const maxSpeechMs = Math.max(2500, cleanText.length * 90);
-      setTimeout(() => {
-        if (isSpeaking) completeUtterance();
-      }, maxSpeechMs);
-
-      window.speechSynthesis.speak(utterance);
+      speakNextChunk();
     };
 
     // Central function to send question to n8n AI Counselor and deliver audio answer
@@ -1953,7 +2017,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const trimmedQuery = queryText.trim();
       if (!trimmedQuery) return;
 
-      // Stop recognition while processing
+      // Pre-warm speech token synchronously BEFORE entering async network wait
+      warmUpMobileSpeech();
+
+      // Release microphone audio focus so mobile OS can route to speaker output
       if (recognition && isListening) {
         try { recognition.stop(); } catch(e) {}
       }
@@ -1992,8 +2059,10 @@ document.addEventListener('DOMContentLoaded', () => {
           if (transcriptBox) transcriptBox.scrollTop = transcriptBox.scrollHeight;
         }
 
-        // Speak response out loud in Hindi
-        speakHindi(reply);
+        // Delay 150ms to ensure mobile audio focus switches cleanly from microphone to speaker
+        setTimeout(() => {
+          speakHindi(reply);
+        }, 150);
       } catch (err) {
         console.error('n8n voice webhook dispatch error:', err);
         const fallback = 'नमस्ते! मुझे आपका सवाल मिल गया है। आप सीधे हमारे हेल्पलाइन नंबर +91 98765 43210 पर भी संपर्क कर सकते हैं।';
@@ -2004,6 +2073,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Open Call Modal
     const startCall = () => {
+      warmUpMobileSpeech();
       backdrop.classList.add('is-active');
       document.body.style.overflow = 'hidden';
       voiceSessionId = 'voice_' + Date.now();
@@ -2100,6 +2170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Microphone toggle button
     if (micBtn) {
       micBtn.addEventListener('click', () => {
+        warmUpMobileSpeech();
         if (isListening) {
           if (recognition) {
             try { recognition.stop(); } catch(e) {}
@@ -2117,6 +2188,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Quick Question Chips Listener
     chipBtns.forEach(btn => {
       btn.addEventListener('click', () => {
+        warmUpMobileSpeech();
         const query = btn.getAttribute('data-query');
         if (query) {
           askNaina(query);
@@ -2128,6 +2200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (textForm) {
       textForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        warmUpMobileSpeech();
         if (textInput && textInput.value.trim()) {
           const q = textInput.value.trim();
           textInput.value = '';
